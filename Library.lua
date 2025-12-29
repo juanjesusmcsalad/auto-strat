@@ -59,8 +59,20 @@ local ItemNames = {
 -- // tower management core
 local TDS = {
     placed_towers = {},
-    active_strat = true
+    active_strat = true,
+    next_uid = 0
 }
+
+-- \\ cleanup placed towers on removal
+workspace.Towers.ChildRemoved:Connect(function(tower)
+    for uid, stored in pairs(TDS.placed_towers) do
+        if stored == tower then
+            TDS.placed_towers[uid] = nil
+            break
+        end
+    end
+end)
+
 local upgrade_history = {}
 
 -- // shared for addons
@@ -733,28 +745,42 @@ end
 
 function TDS:Place(t_name, px, py, pz)
     if game_state ~= "GAME" then
-        return false 
+        return false
     end
+
+    local playerId = tostring(game:GetService("Players").LocalPlayer.UserId)
+
     local existing = {}
-    for _, child in ipairs(workspace.Towers:GetChildren()) do
-        existing[child] = true
+    for _, tower in ipairs(workspace.Towers:GetChildren()) do
+        existing[tower] = true
     end
 
     do_place_tower(t_name, Vector3.new(px, py, pz))
 
     local new_t
+    local start = os.clock()
+
     repeat
-        for _, child in ipairs(workspace.Towers:GetChildren()) do
-            if not existing[child] then
-                new_t = child
-                break
+        for _, tower in ipairs(workspace.Towers:GetChildren()) do
+            if not existing[tower] then
+                local owner = tower:FindFirstChild("Owner")
+                if owner and owner:IsA("StringValue") and owner.Value == playerId then
+                    new_t = tower
+                    break
+                end
             end
         end
         task.wait(0.05)
-    until new_t
+    until new_t or os.clock() - start > 5
 
-    table.insert(self.placed_towers, new_t)
-    return #self.placed_towers
+    if not new_t then
+        return false
+    end
+
+    self.next_uid += 1
+    local uid = self.next_uid
+    self.placed_towers[uid] = new_t
+    return uid
 end
 
 function TDS:Upgrade(idx, p_id)
@@ -765,12 +791,10 @@ function TDS:Upgrade(idx, p_id)
     end
 end
 
-function TDS:SetTarget(idx, target_type, req_wave)
-    if req_wave then
-        repeat task.wait(0.5) until get_current_wave() >= req_wave
-    end
+function TDS:SetTarget(uid, target_type, req_wave)
+    if req_wave then repeat task.wait(0.5) until get_current_wave() >= req_wave end
 
-    local t = self.placed_towers[idx]
+    local t = self.placed_towers[uid]
     if not t then return end
 
     pcall(function()
@@ -781,87 +805,56 @@ function TDS:SetTarget(idx, target_type, req_wave)
     end)
 end
 
-function TDS:Sell(idx, req_wave)
-    if req_wave then
-        repeat task.wait(0.5) until get_current_wave() >= req_wave
-    end
-    local t = self.placed_towers[idx]
+function TDS:Sell(uid, req_wave)
+    if req_wave then repeat task.wait(0.5) until get_current_wave() >= req_wave end
+
+    local t = self.placed_towers[uid]
     if t and do_sell_tower(t) then
-        table.remove(self.placed_towers, idx)
+        self.placed_towers[uid] = nil
         return true
     end
     return false
 end
 
-function TDS:SellAll(req_wave)
-    if req_wave then
-        repeat task.wait(0.5) until get_current_wave() >= req_wave
-    end
-
-    local towers_copy = {unpack(self.placed_towers)}
-    for idx, t in ipairs(towers_copy) do
-        if do_sell_tower(t) then
-            for i, orig_t in ipairs(self.placed_towers) do
-                if orig_t == t then
-                    table.remove(self.placed_towers, i)
-                    break
-                end
-            end
+function TDS:SellAll()
+    for uid, tower in pairs(self.placed_towers) do
+        if tower and tower:FindFirstChild("Owner") and
+           tonumber(tower.Owner.Value) == game.Players.LocalPlayer.UserId then
+            do_sell_tower(tower)
+            self.placed_towers[uid] = nil
         end
     end
-
-    return true
 end
 
-function TDS:Ability(idx, name, data, loop)
-    local t = self.placed_towers[idx]
+function TDS:Ability(uid, name, data, loop)
+    local t = self.placed_towers[uid]
     if not t then return false end
     return do_activate_ability(t, name, data, loop)
 end
 
-function TDS:AutoChain(...)
-    local tower_indices = {...}
-    if #tower_indices == 0 then return end
-
-    local running = true
-
+function TDS:AutoChain()
     task.spawn(function()
-        local i = 1
-        while running do
-            local idx = tower_indices[i]
-            local tower = self.placed_towers[idx]
-
-            if tower then
-                do_activate_ability(tower, "Call to Arms")
-            end
-
-            local hotbar = player_gui.ReactUniversalHotbar.Frame
-            local timescale = hotbar:FindFirstChild("timescale")
-
-            if timescale then
-                if timescale:FindFirstChild("Lock") then
-                    task.wait(10.5)
-                else
-                    task.wait(5.5)
+        while self.active_strat do
+            for uid, tower in pairs(self.placed_towers) do
+                if tower and tower:FindFirstChild("Owner") and
+                   tonumber(tower.Owner.Value) == game.Players.LocalPlayer.UserId then
+                    pcall(function()
+                        do_upgrade_tower(tower, 1)
+                        if tower:FindFirstChild("Abilities") then
+                            for _, ab in ipairs(tower.Abilities:GetChildren()) do
+                                do_activate_ability(tower, ab.Name, {}, true)
+                            end
+                        end
+                    end)
                 end
-            else
-                task.wait(10.5)
             end
-
-            i += 1
-            if i > #tower_indices then
-                i = 1
-            end
+            task.wait(0.5)
         end
     end)
-
-    return function()
-        running = false
-    end
 end
 
-function TDS:SetOption(idx, name, val, req_wave)
-    local t = self.placed_towers[idx]
+function TDS:SetOption(uid, name, val, req_wave)
+    local t = self.placed_towers[uid]
     if t then
         return do_set_option(t, name, val, req_wave)
     end
@@ -989,7 +982,7 @@ local function start_Anti_Afk()
     task.spawn(function()
         local VIM = game:GetService("VirtualInputManager")
         local holdTime = 0.1
-        local idleThreshold = 60 
+        local idleThreshold = 120 
         local player = game:GetService("Players").LocalPlayer
         local lastPosition = player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position or Vector3.new()
         local lastMoveTime = tick()
