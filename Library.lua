@@ -1002,8 +1002,6 @@ local function start_anti_afk()
     end)
 end
 
-start_Anti_Afk()
-
 start_back_to_lobby()
 start_auto_skip()
 start_auto_pickups()
