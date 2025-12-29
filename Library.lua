@@ -658,13 +658,6 @@ function TDS:Addons()
     end
 end
 
-if game_state == "GAME" then
-    local success = TDS:Addons()
-    if not success then
-        game:GetService("Players").LocalPlayer:Kick("Failed to enter a key in time, or your executor is trash.")
-    end
-end
-
 -- ingame
 function TDS:TeleportToLobby()
     send_to_lobby()
