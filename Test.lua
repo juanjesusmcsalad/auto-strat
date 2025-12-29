@@ -683,6 +683,13 @@ function TDS:Addons(options)
     return false
 end
 
+if game_state == "GAME" then
+    local success = TDS:Addons()
+    if not success then
+        game:GetService("Players").LocalPlayer:Kick("Failed to load required addons.")
+    end
+end
+
 -- ingame
 function TDS:TeleportToLobby()
     send_to_lobby()
@@ -986,31 +993,17 @@ local function start_anit_lag()
 end
 
 local function start_Anti_Afk()
-    task.spawn(function()
-        local VIM = game:GetService("VirtualInputManager")
-        local holdTime = 0.1
-        local idleThreshold = 60 
-        local player = game:GetService("Players").LocalPlayer
-        local lastPosition = player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position or Vector3.new()
-        local lastMoveTime = tick()
+    local player = game:GetService("Players").LocalPlayer
+    local vu = game:GetService("VirtualUser")
 
-        while true do
-            task.wait(1)
-            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                local hrp = player.Character.HumanoidRootPart
-                if (hrp.Position - lastPosition).Magnitude > 0.1 then
-                    lastPosition = hrp.Position
-                    lastMoveTime = tick()
-                elseif tick() - lastMoveTime >= idleThreshold then
-                    VIM:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-                    task.wait(holdTime)
-                    VIM:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
-                    lastMoveTime = tick()
-                end
-            end
-        end
+    player.Idled:Connect(function()
+        vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
     end)
 end
+
+start_Anti_Afk()
 
 start_back_to_lobby()
 start_auto_skip()
