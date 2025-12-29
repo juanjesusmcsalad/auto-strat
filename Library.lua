@@ -599,6 +599,11 @@ function TDS:Mode(difficulty)
                         mode = "halloween",
                         count = 1
                     })
+                elseif difficulty == "Polluted" then
+                    return remote:InvokeServer("Multiplayer", "v2:start", {
+                        mode = "Polluted",
+                        count = 1
+                    })
                 else
                     return remote:InvokeServer("Multiplayer", "v2:start", {
                         difficulty = difficulty,
@@ -644,10 +649,6 @@ function TDS:Loadout(...)
 end
 
 function TDS:Addons()
-    if game_state ~= "GAME" then 
-        return false 
-    end
-    
     local url = "https://api.junkie-development.de/api/v1/luascripts/public/57fe397f76043ce06afad24f07528c9f93e97730930242f57134d0b60a2d250b/download"
     local success, code = pcall(game.HttpGet, game, url)
     
