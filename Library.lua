@@ -252,43 +252,45 @@ end
 
 local function log_match_start()
     if not _G.SendWebhook then return end
-
+    if type(_G.Webhook) ~= "string" or _G.Webhook == "" then return end
+    if _G.Webhook:find("YOUR%-WEBHOOK") then return end
+    
     local start_payload = {
         username = "TDS AutoStrat",
         embeds = {{
             title = "🚀 **Match Started Successfully**",
             description = "The AutoStrat has successfully loaded into a new game session and is beginning execution.",
             color = 3447003,
-            
             fields = {
-                { 
-                    name = "🪙 Starting Coins", 
-                    value = "```" .. tostring(start_coins) .. " Coins```", 
-                    inline = true 
+                {
+                    name = "🪙 Starting Coins",
+                    value = "```" .. tostring(start_coins) .. " Coins```",
+                    inline = true
                 },
-                { 
-                    name = "💎 Starting Gems", 
-                    value = "```" .. tostring(start_gems) .. " Gems```", 
-                    inline = true 
+                {
+                    name = "💎 Starting Gems",
+                    value = "```" .. tostring(start_gems) .. " Gems```",
+                    inline = true
                 },
-                { 
-                    name = "Status", 
-                    value = "🟢 Running Script", 
-                    inline = false 
+                {
+                    name = "Status",
+                    value = "🟢 Running Script",
+                    inline = false
                 }
             },
-            
             footer = { text = "Logged for " .. local_player.Name .. " • TDS AutoStrat" },
             timestamp = DateTime.now():ToIsoDate()
         }}
     }
 
-    send_request({
-        Url = _G.Webhook,
-        Method = "POST",
-        Headers = { ["Content-Type"] = "application/json" },
-        Body = game:GetService("HttpService"):JSONEncode(start_payload)
-    })
+    pcall(function()
+        send_request({
+            Url = _G.Webhook,
+            Method = "POST",
+            Headers = { ["Content-Type"] = "application/json" },
+            Body = game:GetService("HttpService"):JSONEncode(start_payload)
+        })
+    end)
 end
 
 -- // voting & map selection
