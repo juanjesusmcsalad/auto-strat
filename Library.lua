@@ -720,6 +720,9 @@ function TDS:StartGame()
 end
 
 function TDS:Ready()
+    if game_state ~= "GAME" then
+        return false 
+    end
     match_ready_up()
 end
 
