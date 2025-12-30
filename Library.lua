@@ -246,7 +246,7 @@ local function handle_post_match()
                     inline = true
                 }
             },
-            footer = { text = "Logged for " .. local_player.DisplayName .. " • TDS AutoStrat" },
+            footer = { text = "Logged for " .. local_player.Name .. " • TDS AutoStrat" },
             timestamp = DateTime.now():ToIsoDate()
         }}
     }
@@ -293,7 +293,7 @@ local function log_match_start()
                     inline = false
                 }
             },
-            footer = { text = "Logged for " .. local_player.DisplayName .. " • TDS AutoStrat" },
+            footer = { text = "Logged for " .. local_player.Name .. " • TDS AutoStrat" },
             timestamp = DateTime.now():ToIsoDate()
         }}
     }
