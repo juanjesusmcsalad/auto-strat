@@ -68,6 +68,7 @@ local TDS = {
     matchmaking_map = {
         ["Hardcore"] = "hardcore",
         ["Pizza Party"] = "halloween",
+        ["Badlands"] = "badlands",
         ["Polluted"] = "polluted"
     }
 }
@@ -411,11 +412,37 @@ local function is_map_available(name)
     for _, g in ipairs(workspace:GetDescendants()) do
         if g:IsA("SurfaceGui") and g.Name == "MapDisplay" then
             local t = g:FindFirstChild("Title")
-            if t and t.Text == name then
-                return true
-            end
+            if t and t.Text == name then return true end
         end
     end
+
+    repeat
+        remote_event:FireServer("LobbyVoting", "Veto")
+        wait(1)
+
+        local found = false
+        for _, g in ipairs(workspace:GetDescendants()) do
+            if g:IsA("SurfaceGui") and g.Name == "MapDisplay" then
+                local t = g:FindFirstChild("Title")
+                if t and t.Text == name then
+                    found = true
+                    break
+                end
+            end
+        end
+
+        local total_player = #players_service:GetChildren()
+        local veto_text = player_gui:WaitForChild("ReactGameIntermission"):WaitForChild("Frame"):WaitForChild("buttons"):WaitForChild("veto"):WaitForChild("value").Text
+        
+    until found or veto_text == "Veto ("..total_player.."/"..total_player..")"
+
+    for _, g in ipairs(workspace:GetDescendants()) do
+        if g:IsA("SurfaceGui") and g.Name == "MapDisplay" then
+            local t = g:FindFirstChild("Title")
+            if t and t.Text == name then return true end
+        end
+    end
+
     return false
 end
 
@@ -722,9 +749,6 @@ function TDS:Loadout(...)
 end
 
 function TDS:Addons()
-    if game_state ~= "GAME" then
-        return false
-    end
     local url = "https://api.junkie-development.de/api/v1/luascripts/public/57fe397f76043ce06afad24f07528c9f93e97730930242f57134d0b60a2d250b/download"
     local success, code = pcall(game.HttpGet, game, url)
 
@@ -734,7 +758,7 @@ function TDS:Addons()
 
     loadstring(code)()
 
-    while not TDS.Equip do
+    while not TDS.Equip and TDS.MultiMode and TDS.Multiplayer do
         task.wait(0.1)
     end
 
