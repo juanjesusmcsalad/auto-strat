@@ -1,5 +1,8 @@
 if not game:IsLoaded() then game.Loaded:Wait() end
 
+loadstring(game:HttpGet("https://raw.githubusercontent.com/DuxiiT/auto-strat/refs/heads/main/Sources/GuiSource.lua"))()
+local Console = shared.AutoStratGUI.Console
+
 local function identify_game_state()
     local players = game:GetService("Players")
     local temp_player = players.LocalPlayer or players.PlayerAdded:Wait()
@@ -40,6 +43,16 @@ local auto_pickups_running = false
 local auto_skip_running = false
 local anti_lag_running = false
 
+local MaxLogs = 35
+local Logs = {}
+
+local ColorMap = {
+    green = "#2BFFAE",
+    red = "#FF3A3A",
+    orange = "#FFA500",
+    yellow = "#FFF300",
+}
+
 -- // icon item ids ill add more soon arghh
 local ItemNames = {
     ["17447507910"] = "Timescale Ticket(s)",
@@ -77,6 +90,73 @@ local upgrade_history = {}
 
 -- // shared for addons
 shared.TDS_Table = TDS
+
+-- // console logging helpers
+local function classifyColor(text)
+    local t = text:lower()
+
+    if t:find("error")
+        or t:find("failed")
+        or t:find("invalid")
+        or t:find("missing")
+        or t:find("cannot")
+        or t:find("nil")
+        or t:find("no ") then
+        return "red"
+    end
+
+    if t:find("warning")
+        or t:find("issue")
+        or t:find("retry")
+        or t:find("skipped")
+        or t:find("delay") then
+        return "orange"
+    end
+
+    if t:find("loaded")
+        or t:find("detected")
+        or t:find("updated")
+        or t:find("adjusted")
+        or t:find("processing") then
+        return "yellow"
+    end
+
+    return "green"
+end
+
+-- // console logging
+local function log(text, color)
+    color = color or classifyColor(text)
+    local hex = ColorMap[color] or ColorMap.green
+    local formatted = "<font color='" .. hex .. "'>" .. text .. "</font>"
+
+    local ConsoleLogExample = Instance.new("TextLabel")
+    ConsoleLogExample.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    ConsoleLogExample.BackgroundTransparency = 1
+    ConsoleLogExample.BorderSizePixel = 0
+    ConsoleLogExample.Size = UDim2.new(1, -8, 0, 0) -- initial height 0
+    ConsoleLogExample.Font = Enum.Font.SourceSansSemibold
+    ConsoleLogExample.RichText = true
+    ConsoleLogExample.Text = formatted
+    ConsoleLogExample.TextSize = 14
+    ConsoleLogExample.TextWrapped = true
+    ConsoleLogExample.TextXAlignment = Enum.TextXAlignment.Left
+    ConsoleLogExample.TextYAlignment = Enum.TextYAlignment.Top
+    ConsoleLogExample.TextColor3 = Color3.fromRGB(255,255,255)
+    ConsoleLogExample.AutomaticSize = Enum.AutomaticSize.Y -- automatically size vertically
+    ConsoleLogExample.Parent = Console
+
+    table.insert(Logs, ConsoleLogExample)
+
+    if #Logs > MaxLogs then
+        Logs[1]:Destroy()
+        table.remove(Logs, 1)
+    end
+
+    task.wait()
+    Console.CanvasSize = UDim2.new(0,0,0,Console.UIListLayout.AbsoluteContentSize.Y)
+    Console.CanvasPosition = Vector2.new(0, Console.CanvasSize.Y.Offset)
+end
 
 -- // currency tracking
 local start_coins, current_total_coins, start_gems, current_total_gems = 0, 0, 0, 0
@@ -372,11 +452,13 @@ local function cast_map_vote(map_id, pos_vec)
     local target_map = map_id or "Simplicity"
     local target_pos = pos_vec or Vector3.new(0,0,0)
     remote_event:FireServer("LobbyVoting", "Vote", target_map, target_pos)
+    log("Cast map vote: " .. target_map, "green")
 end
 
 local function lobby_ready_up()
     pcall(function()
         remote_event:FireServer("LobbyVoting", "Ready")
+        log("Lobby ready up sent", "green")
     end)
 end
 
@@ -491,9 +573,10 @@ local function unlock_speed_tickets()
     if local_player.TimescaleTickets.Value >= 1 then
         if game.Players.LocalPlayer.PlayerGui.ReactUniversalHotbar.Frame.timescale.Lock.Visible then
             replicated_storage.RemoteFunction:InvokeServer('TicketsManager', 'UnlockTimeScale')
+            log("Unlocked timescale tickets", "yellow")
         end
     else
-        warn("no tickets left")
+        log("No timescale tickets left", "red")
     end
 end
 
@@ -712,6 +795,7 @@ function TDS:Loadout(...)
                 repeat
                     local ok = pcall(function()
                         remote:InvokeServer("Inventory", "Equip", "tower", tower_name)
+                        log("Equipped tower: " .. tower_name, "green")
                     end)
                     if ok then
                         success = true
@@ -738,6 +822,7 @@ function TDS:Loadout(...)
             repeat
                 local ok = pcall(function()
                     remote:InvokeServer("Inventory", "Equip", "tower", tower_name)
+                    log("Equipped tower: " .. tower_name, "green")
                 end)
                 if ok then
                     success = true
@@ -799,6 +884,7 @@ function TDS:VoteSkip(start_wave, end_wave)
                 if skip_visible and skip_visible.Position == UDim2.new(0.5, 0, 0.5, 0) then
                     run_vote_skip()
                     skip_done = true
+                    log("Voted to skip wave " .. wave, "green")
                 else
                     task.wait(0.2)
                 end
@@ -818,6 +904,7 @@ function TDS:GameInfo(name, list)
 
     if marketplace_service:UserOwnsGamePassAsync(local_player.UserId, 10518590) then
         select_map_override(name, "vip")
+        log("Selected map: " .. name, "green")
     elseif is_map_available(name) then
         select_map_override(name)
     else
@@ -874,6 +961,7 @@ function TDS:Place(t_name, px, py, pz, ...)
     end
 
     do_place_tower(t_name, Vector3.new(px, py, pz))
+    log("Placing tower: " .. t_name, "green")
 
     local new_t
     repeat
@@ -899,6 +987,7 @@ function TDS:Upgrade(idx, p_id)
     local t = self.placed_towers[idx]
     if t then
         do_upgrade_tower(t, p_id or 1)
+        log("Upgrading tower index: " .. idx, "green")
         upgrade_history[idx] = (upgrade_history[idx] or 0) + 1
     end
 end
@@ -916,6 +1005,7 @@ function TDS:SetTarget(idx, target_type, req_wave)
             Troop = t,
             Target = target_type
         })
+        log("Set target for tower index " .. idx .. " to " .. target_type, "green")
     end)
 end
 
@@ -955,6 +1045,7 @@ end
 function TDS:Ability(idx, name, data, loop)
     local t = self.placed_towers[idx]
     if not t then return false end
+    log("Activating ability '" .. name .. "' for tower index: " .. idx, "green")
     return do_activate_ability(t, name, data, loop)
 end
 
@@ -1002,6 +1093,7 @@ end
 function TDS:SetOption(idx, name, val, req_wave)
     local t = self.placed_towers[idx]
     if t then
+        log("Setting option '" .. name .. "' for tower index: " .. idx, "green")
         return do_set_option(t, name, val, req_wave)
     end
     return false

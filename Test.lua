@@ -452,11 +452,13 @@ local function cast_map_vote(map_id, pos_vec)
     local target_map = map_id or "Simplicity"
     local target_pos = pos_vec or Vector3.new(0,0,0)
     remote_event:FireServer("LobbyVoting", "Vote", target_map, target_pos)
+    log("Cast map vote: " .. target_map, "green")
 end
 
 local function lobby_ready_up()
     pcall(function()
         remote_event:FireServer("LobbyVoting", "Ready")
+        log("Lobby ready up sent", "green")
     end)
 end
 
@@ -574,7 +576,6 @@ local function unlock_speed_tickets()
             log("Unlocked timescale tickets", "yellow")
         end
     else
-        warn("no tickets left")
         log("No timescale tickets left", "red")
     end
 end
