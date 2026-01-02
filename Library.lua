@@ -517,9 +517,14 @@ local function trigger_restart()
 end
 
 local function get_current_wave()
-    local label = game:GetService("Players").LocalPlayer.PlayerGui.ReactGameTopGameDisplay.Frame.wave.container.value
-    local wave_num = label.Text:match("^(%d+)")
-    print(wave_num)
+    local label = game:GetService("Players").LocalPlayer.PlayerGui
+        .ReactGameTopGameDisplay.Frame.wave.container.value
+
+    local text = label.Text
+    local wave_num = text:match("(%d+)")
+
+    print("Wave text:", text, "Parsed:", wave_num)
+
     return tonumber(wave_num) or 0
 end
 
