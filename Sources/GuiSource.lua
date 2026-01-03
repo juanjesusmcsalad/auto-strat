@@ -53,11 +53,11 @@ shadowHolder.Size = UDim2.new(1,0,1,0)
 local function createShadow(parent)
 	local sh = Instance.new("ImageLabel", parent)
 	sh.AnchorPoint = Vector2.new(0.5,0.5)
-	sh.BackgroundTransparency = 1
+	sh.BackgroundTransparency = 0.99
 	sh.Position = UDim2.new(0.5,0,0.5,0)
 	sh.Size = UDim2.new(1,0,1,0)
 	sh.Image = "rbxassetid://1316045217"
-	sh.ImageTransparency = 0.88
+	sh.ImageTransparency = 0.99
 	sh.ScaleType = Enum.ScaleType.Slice
 	sh.SliceCenter = Rect.new(10,10,118,118)
 	return sh
