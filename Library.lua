@@ -40,6 +40,7 @@ local auto_pickups_running = false
 local auto_skip_running = false
 local auto_claim_rewards = false
 local anti_lag_running = false
+local auto_chain_running = false
 
 local ColorMap = {
     green = "#2BFFAE",
@@ -1300,6 +1301,49 @@ local function start_rejoin_on_disconnect()
     end)
 end
 
+local function start_auto_chain()
+    if auto_chain_running or not _G.AutoChain then return end
+    auto_chain_running = true
+
+    task.spawn(function()
+        local idx = 1
+
+        while _G.AutoChain do
+            local commander = {}
+            local towers_folder = workspace:FindFirstChild("Towers")
+
+            if towers_folder then
+                for _, towers in ipairs(towers_folder:GetDescendants()) do
+                    if towers:IsA("Folder") and towers.Name == "TowerReplicator"
+                    and towers:GetAttribute("Name") == "Commander"
+                    and towers:GetAttribute("OwnerId") == game.Players.LocalPlayer.UserId
+                    and (towers:GetAttribute("Upgrade") or 0) >= 2 then
+                        commander[#commander + 1] = towers.Parent
+                    end
+                end
+            end
+
+            if #commander >= 3 then
+                if idx > #commander then idx = 1 end
+
+                remote_func:InvokeServer(
+                    "Troops",
+                    "Abilities",
+                    "Activate",
+                    { Troop = commander[idx], Name = "Call Of Arms", Data = {} }
+                )
+
+                idx += 1
+                task.wait(11)
+            else
+                task.wait(1)
+            end
+        end
+
+        auto_chain_running = false
+    end)
+end
+
 task.spawn(function()
     while true do
         if _G.AutoPickups and not auto_pickups_running then
@@ -1308,6 +1352,10 @@ task.spawn(function()
         
         if _G.AutoSkip and not auto_skip_running then
             start_auto_skip()
+        end
+
+        if _G.AutoChain and not auto_chain_running then
+            start_auto_chain()
         end
 
         if _G.ClaimRewards and not auto_claim_rewards then
