@@ -12,6 +12,8 @@ local function save_settings()
     local data = {
         AutoSkip = _G.AutoSkip,
         AutoPickups = _G.AutoPickups,
+        AutoChain = _G.AutoChain,
+        AutoDJ = _G.AutoDJ,
         AntiLag = _G.AntiLag,
         ClaimRewards = _G.ClaimRewards,
         SendWebhook = _G.SendWebhook,
@@ -24,6 +26,8 @@ local function load_settings()
     local default = {
         AutoSkip = false,
         AutoPickups = false,
+        AutoChain = false,
+        AutoDJ = false,
         AntiLag = false,
         ClaimRewards = false,
         SendWebhook = false,
@@ -44,6 +48,7 @@ local function load_settings()
         _G[k] = v
     end
 end
+
 
 load_settings()
 
@@ -192,6 +197,8 @@ end
 
 create_toggle("Auto Skip Waves", "AutoSkip")
 create_toggle("Auto Collect Pickups", "AutoPickups")
+create_toggle("Auto Chain", "AutoChain")
+create_toggle("Auto DJ Booth", "AutoDJ")
 create_toggle("Enable Anti-Lag", "AntiLag")
 create_toggle("Claim Rewards", "ClaimRewards")
 create_toggle("Send Discord Webhook", "SendWebhook")
