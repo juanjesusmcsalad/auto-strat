@@ -40,9 +40,6 @@ local auto_pickups_running = false
 local auto_skip_running = false
 local anti_lag_running = false
 
-local log_table = {}
-local max_logs = 100
-
 local ColorMap = {
     green = "#2BFFAE",
     red = "#FF3A3A",
@@ -88,12 +85,14 @@ local upgrade_history = {}
 -- // shared for addons
 shared.TDS_Table = TDS
 
-
 -- // ui
 loadstring(game:HttpGet("https://raw.githubusercontent.com/DuxiiT/auto-strat/refs/heads/main/Sources/GuiSource.lua"))()
 local Console = shared.AutoStratGUI.Console
 
 shared.AutoStratGUI.Status(tostring(game_state))
+
+local log_table = {}
+local max_logs = 100
 
 -- // console
 local function classify_color(text)
@@ -130,17 +129,27 @@ end
 
 -- // console logging
 local function log(text, color)
+    local console_scrolling = shared.AutoStratGUI and shared.AutoStratGUI.Console
+    if not console_scrolling then return end
+    
+    local log_layout = console_scrolling:FindFirstChildOfClass("UIListLayout")
+
     color = color or (classify_color and classify_color(text))
-    local hex = (ColorMap and ColorMap[color]) or "#00ff96"
+    local ColorMap = {
+        red = "#ff4d4d",
+        orange = "#ff9f43",
+        yellow = "#feca57",
+        green = "#00ff96"
+    }
+    
+    local hex = ColorMap[color] or "#00ff96"
     local timestamp = os.date("%H:%M:%S")
     
     local formatted_text = string.format("<font color='#555564'>[%s]</font> <font color='%s'>%s</font>", timestamp, hex, text)
 
     local log_entry = Instance.new("TextLabel")
     log_entry.Name = "LogEntry"
-    log_entry.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     log_entry.BackgroundTransparency = 1
-    log_entry.BorderSizePixel = 0
     log_entry.Size = UDim2.new(1, -8, 0, 0)
     log_entry.Font = Enum.Font.SourceSansSemibold
     log_entry.RichText = true
@@ -148,7 +157,6 @@ local function log(text, color)
     log_entry.TextSize = 14
     log_entry.TextWrapped = true
     log_entry.TextXAlignment = Enum.TextXAlignment.Left
-    log_entry.TextYAlignment = Enum.TextYAlignment.Top
     log_entry.TextColor3 = Color3.fromRGB(255, 255, 255)
     log_entry.AutomaticSize = Enum.AutomaticSize.Y
     log_entry.Parent = console_scrolling
@@ -161,7 +169,7 @@ local function log(text, color)
     end
 
     task.wait()
-    if console_scrolling:FindFirstChildOfClass("UIListLayout") then
+    if log_layout then
         console_scrolling.CanvasSize = UDim2.new(0, 0, 0, log_layout.AbsoluteContentSize.Y)
         console_scrolling.CanvasPosition = Vector2.new(0, console_scrolling.CanvasSize.Y.Offset)
     end
