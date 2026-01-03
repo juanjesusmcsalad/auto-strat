@@ -38,6 +38,7 @@ local player_gui = local_player:WaitForChild("PlayerGui")
 local back_to_lobby_running = false
 local auto_pickups_running = false
 local auto_skip_running = false
+local auto_claim_rewards = false
 local anti_lag_running = false
 
 local ColorMap = {
@@ -1178,6 +1179,33 @@ local function start_auto_skip()
     end)
 end
 
+local function start_claim_rewards()
+    if auto_claim_rewards or not _G.ClaimRewards then return end
+    auto_claim_rewards = true
+
+    local spintickets = player_gui:FindFirstChild("Interface") 
+        and player_gui.Interface.Root:FindFirstChild("Frame")
+    
+    local playtime_items = player_gui:FindFirstChild("ReactLobbyPlaytime") 
+        and player_gui.ReactLobbyPlaytime:FindFirstChild("Frame") 
+        and player_gui.ReactLobbyPlaytime.Frame:FindFirstChild("Items")
+
+    while _G.ClaimRewards and game_state == "LOBBY" do
+        if spintickets then
+            for _, child in ipairs(spintickets:GetChildren()) do
+                if child.Name == "Currency" and child:FindFirstChild("Icon") then
+                    if child.Icon.Image == "rbxassetid://18493073533" then
+                        game:GetService("ReplicatedStorage").Network.DailySpin["RF:RedeemSpin"]:InvokeServer(game:GetService("ReplicatedStorage").Client.Modules.Lobby.Controllers.DailySpinController)
+                    end
+                end
+            end
+        end
+        task.wait(0.5)
+    end
+
+    auto_claim_rewards = false
+end
+
 local function start_back_to_lobby()
     if back_to_lobby_running then return end
     back_to_lobby_running = true
@@ -1196,6 +1224,10 @@ end
 local function start_anti_lag()
     if anti_lag_running then return end
     anti_lag_running = true
+
+    local settings = settings().Rendering
+    local original_quality = settings.QualityLevel
+    settings.QualityLevel = Enum.QualityLevel.Level01
 
     task.spawn(function()
         while _G.AntiLag do
@@ -1268,10 +1300,29 @@ local function start_rejoin_on_disconnect()
     end)
 end
 
+task.spawn(function()
+    while true do
+        if _G.AutoPickups and not auto_pickups_running then
+            start_auto_pickups()
+        end
+        
+        if _G.AutoSkip and not auto_skip_running then
+            start_auto_skip()
+        end
+
+        if _G.ClaimRewards and not auto_claim_rewards then
+            start_claim_rewards()
+        end
+        
+        if _G.AntiLag and not anti_lag_running then
+            start_anti_lag()
+        end
+        
+        task.wait(1)
+    end
+end)
+
 start_back_to_lobby()
-start_auto_skip()
-start_auto_pickups()
-start_anti_lag()
 start_anti_afk()
 start_rejoin_on_disconnect()
 
