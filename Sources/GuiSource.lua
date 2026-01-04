@@ -306,24 +306,45 @@ minimize_button.TextSize = 18
 Instance.new("UICorner", minimize_button).CornerRadius = UDim.new(1, 0)
 minimize_button.MouseButton1Click:Connect(toggle_gui)
 
-local is_dragging, drag_start, start_pos
+local run_service = game:GetService("RunService")
+
+local dragging = false
+local drag_start
+local start_pos
+local target_pos = main_frame.Position
+
 header_frame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        is_dragging = true
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
         drag_start = input.Position
         start_pos = main_frame.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
     end
 end)
 
 user_input_service.InputChanged:Connect(function(input)
-    if is_dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+    if dragging and (
+        input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch
+    ) then
         local delta = input.Position - drag_start
-        main_frame.Position = UDim2.new(start_pos.X.Scale, start_pos.X.Offset + delta.X, start_pos.Y.Scale, start_pos.Y.Offset + delta.Y)
+        target_pos = UDim2.new(
+            start_pos.X.Scale,
+            start_pos.X.Offset + delta.X,
+            start_pos.Y.Scale,
+            start_pos.Y.Offset + delta.Y
+        )
     end
 end)
 
-user_input_service.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then is_dragging = false end
+run_service.RenderStepped:Connect(function()
+    main_frame.Position = main_frame.Position:Lerp(target_pos, 0.25)
 end)
 
 user_input_service.InputBegan:Connect(function(input, processed)
