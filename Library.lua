@@ -834,7 +834,7 @@ function TDS:Loadout(...)
                 local ok = pcall(function()
                     remote:InvokeServer("Inventory", "Equip", "tower", tower_name)
                     log("Equipped tower: " .. tower_name, "green")
-                    task.wait(1)
+                    task.wait(0.5)
                 end)
                 if ok then
                     success = true
@@ -846,7 +846,7 @@ function TDS:Loadout(...)
         end
     end
 
-    task.wait(2)
+    task.wait(0.5)
 
     return true
 end
@@ -865,9 +865,10 @@ function TDS:Addons()
         task.wait(0.1)
     end
 
-    if game_state == "GAME" then
-        while not TDS.Equip do
-            task.wait(0.1)
+    local original_equip = TDS.Equip
+    TDS.Equip = function(...)
+        if game_state == "GAME" then
+            return original_equip(...)
         end
     end
 
