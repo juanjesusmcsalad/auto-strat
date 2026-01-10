@@ -72,7 +72,7 @@ function TDS:Addons()
 
     repeat
         task.wait()
-    until tds.Equip or tds.equip 
+    until TDS.Equip
 
     return true
 end
