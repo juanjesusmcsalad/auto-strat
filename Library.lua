@@ -29,6 +29,7 @@ end
 local teleport_service = game:GetService("TeleportService")
 local marketplace_service = game:GetService("MarketplaceService")
 local replicated_storage = game:GetService("ReplicatedStorage")
+local http_service = game:GetService("HttpService")
 local remote_func = replicated_storage:WaitForChild("RemoteFunction")
 local remote_event = replicated_storage:WaitForChild("RemoteEvent")
 local players_service = game:GetService("Players")
@@ -807,15 +808,6 @@ function TDS:Mode(difficulty)
     return true
 end
 
-local args = {
-	"Inventory",
-	"Unequip",
-	"tower",
-	""
-}
-game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
-
-
 function TDS:Loadout(...)
     if game_state ~= "LOBBY" then
         return
@@ -827,28 +819,81 @@ function TDS:Loadout(...)
 
     local towers = {...}
     local remote = game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunction")
+    local state_replicators = replicated_storage:FindFirstChild("StateReplicators")
+    
+    local currently_equipped = {}
 
-    for _, tower_name in ipairs(towers) do
-        if tower_name and tower_name ~= "" then
-            local success = false
+    if state_replicators then
+        for _, folder in ipairs(state_replicators:GetChildren()) do
+            if folder.Name == "PlayerReplicator" and folder:GetAttribute("UserId") == local_player.UserId then
+                local equipped_attr = folder:GetAttribute("EquippedTowers")
+                if type(equipped_attr) == "string" then
+                    local cleaned_json = equipped_attr:match("%[.*%]") 
+                    local decode_success, decoded = pcall(function()
+                        return http_service:JSONDecode(cleaned_json)
+                    end)
+
+                    if decode_success and type(decoded) == "table" then
+                        currently_equipped = decoded
+                    end
+                end
+            end
+        end
+    end
+
+    local function table_contains(t, value)
+        for _, v in ipairs(t) do
+            if v == value then return true end
+        end
+        return false
+    end
+
+    local matches = #towers == #currently_equipped
+    if matches then
+        for _, t in ipairs(towers) do
+            if not table_contains(currently_equipped, t) then
+                matches = false
+                break
+            end
+        end
+    end
+
+    if matches then
+        log("All towers are equipped", "green")
+        return true
+    end
+
+    for _, current_tower in ipairs(currently_equipped) do
+        if current_tower ~= "None" and not table_contains(towers, current_tower) then
+            local unequip_done = false
             repeat
                 local ok = pcall(function()
-                    remote:InvokeServer("Inventory", "Equip", "tower", tower_name)
-                    log("Equipped tower: " .. tower_name, "green")
-                    task.wait(0.5)
+                    remote:InvokeServer("Inventory", "Unequip", "tower", current_tower)
+                    log("Unequipped: " .. tostring(current_tower), "orange")
+                    task.wait(0.3)
                 end)
-                if ok then
-                    success = true
-                else
-                    task.wait(0.2)
-                end
-            until success
-            task.wait(0.4)
+                if ok then unequip_done = true else task.wait(0.2) end
+            until unequip_done
         end
     end
 
     task.wait(0.5)
 
+    for _, tower_name in ipairs(towers) do
+        if tower_name and tower_name ~= "" and not table_contains(currently_equipped, tower_name) then
+            local equip_success = false
+            repeat
+                local ok = pcall(function()
+                    remote:InvokeServer("Inventory", "Equip", "tower", tower_name)
+                    log("Equipped tower: " .. tower_name, "green")
+                    task.wait(0.3)
+                end)
+                if ok then equip_success = true else task.wait(0.2) end
+            until equip_success
+        end
+    end
+
+    task.wait(0.5)
     return true
 end
 
