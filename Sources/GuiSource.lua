@@ -33,33 +33,18 @@ end
 
 local function load_settings()
     local default = {
-        AutoSkip = false,
-        AutoPickups = false,
-        AutoChain = false,
-        AutoDJ = false,
-        AntiLag = false,
-        ClaimRewards = false,
-        SendWebhook = false,
-        WebhookURL = "",
-        AutoMercenary = false,
-        PathDistance = 0,
-        SellFarms = false,
-        SellFarmsWave = 13
+        AutoSkip = false, AutoPickups = false, AutoChain = false, AutoDJ = false,
+        AntiLag = false, ClaimRewards = false, SendWebhook = false, WebhookURL = "",
+        AutoMercenary = false, PathDistance = 0, SellFarms = false, SellFarmsWave = 13
     }
     if isfile(CONFIG_FILE) then
-        local success, decoded = pcall(function()
-            return http_service:JSONDecode(readfile(CONFIG_FILE))
-        end)
+        local success, decoded = pcall(function() return http_service:JSONDecode(readfile(CONFIG_FILE)) end)
         if success then
-            for k, v in pairs(decoded) do
-                _G[k] = v
-            end
+            for k, v in pairs(decoded) do _G[k] = v end
             return
         end
     end
-    for k, v in pairs(default) do
-        _G[k] = v
-    end
+    for k, v in pairs(default) do _G[k] = v end
 end
 
 load_settings()
@@ -119,6 +104,7 @@ min_btn.TextSize = 18
 Instance.new("UICorner", min_btn).CornerRadius = UDim.new(0, 6)
 
 local open_button = Instance.new("TextButton", tds_gui)
+open_button.Name = "OpenButton"
 open_button.Size = UDim2.new(0, 100, 0, 30)
 open_button.Position = UDim2.new(0.5, -50, 0, 10)
 open_button.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
@@ -127,7 +113,37 @@ open_button.TextColor3 = Color3.fromRGB(255, 255, 255)
 open_button.Font = Enum.Font.GothamBold
 open_button.TextSize = 12
 open_button.Visible = false
+open_button.Active = true
 Instance.new("UICorner", open_button).CornerRadius = UDim.new(0, 6)
+
+local function make_draggable(obj)
+    local drag_toggle = nil
+    local drag_start_pos = nil
+    local start_pos_offset = nil
+
+    obj.InputBegan:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            drag_toggle = true
+            drag_start_pos = input.Position
+            start_pos_offset = obj.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    drag_toggle = false
+                end
+            end)
+        end
+    end)
+
+    user_input_service.InputChanged:Connect(function(input)
+        if drag_toggle and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - drag_start_pos
+            obj.Position = UDim2.new(start_pos_offset.X.Scale, start_pos_offset.X.Offset + delta.X, start_pos_offset.Y.Scale, start_pos_offset.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+make_draggable(open_button)
 
 local function toggle_gui()
     local is_visible = main_frame.Visible
@@ -254,16 +270,10 @@ local function create_toggle_with_input(display_name, toggle_var, input_var, par
     box_stroke.Color = Color3.fromRGB(55, 55, 65)
     box_stroke.Thickness = 1
 
-    box.Focused:Connect(function()
-        box.Text = ""
-    end)
-
-    box.FocusLost:Connect(function(enterPressed)
+    box.Focused:Connect(function() box.Text = "" end)
+    box.FocusLost:Connect(function()
         local val = tonumber(box.Text:match("%d+"))
-        if val then
-            _G[input_var] = val
-            save_settings()
-        end
+        if val then _G[input_var] = val; save_settings() end
         box.Text = "Wave: " .. tostring(_G[input_var])
     end)
 
@@ -331,15 +341,22 @@ local function create_slider(display_name, global_var, min, max, parent)
         save_settings()
     end
 
-    local sliding = false
+    local is_sliding = false
+    
     knob.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then sliding = true end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
+            is_sliding = true 
+        end
     end)
+    
     user_input_service.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then sliding = false end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
+            is_sliding = false 
+        end
     end)
+    
     user_input_service.InputChanged:Connect(function(input)
-        if sliding and input.UserInputType == Enum.UserInputType.MouseMovement then
+        if is_sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             move_knob(input)
         end
     end)
@@ -358,24 +375,24 @@ create_toggle("Claim Rewards", "ClaimRewards", misc_page)
 create_toggle("Send Discord Webhook", "SendWebhook", misc_page)
 
 local webhook_container = Instance.new("Frame", misc_page)
-webhook_container.Size = UDim2.new(1, 0, 0, 60)
-webhook_container.BackgroundTransparency = 1
+webhook_container.Size = UDim2.new(1, 0, 0, 60); webhook_container.BackgroundTransparency = 1
 local webhook_label = Instance.new("TextLabel", webhook_container)
 webhook_label.Size = UDim2.new(1, 0, 0, 20); webhook_label.Text = "WEBHOOK URL"; webhook_label.TextColor3 = Color3.fromRGB(150, 150, 160); webhook_label.Font = Enum.Font.GothamBold; webhook_label.TextSize = 10; webhook_label.BackgroundTransparency = 1; webhook_label.TextXAlignment = Enum.TextXAlignment.Left
 local webhook_box = Instance.new("TextBox", webhook_container)
 webhook_box.Size = UDim2.new(1, 0, 0, 35); webhook_box.Position = UDim2.new(0, 0, 0, 22); webhook_box.BackgroundColor3 = Color3.fromRGB(15, 15, 18); webhook_box.PlaceholderText = "Paste Discord Webhook Link..."; webhook_box.Text = _G.WebhookURL; webhook_box.TextColor3 = Color3.fromRGB(255, 255, 255); webhook_box.Font = Enum.Font.Gotham; webhook_box.TextSize = 11; Instance.new("UICorner", webhook_box).CornerRadius = UDim.new(0, 6)
 webhook_box.FocusLost:Connect(function() _G.WebhookURL = webhook_box.Text; save_settings() end)
 
-local function SwitchTab(tabName)
-    logger_page.Visible = (tabName == "LOGGER"); main_page.Visible = (tabName == "MAIN"); misc_page.Visible = (tabName == "MISC")
-    logger_btn.TextColor3 = (tabName == "LOGGER") and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 160)
-    main_tab_btn.TextColor3 = (tabName == "MAIN") and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 160)
-    misc_tab_btn.TextColor3 = (tabName == "MISC") and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 160)
+local function switch_tab(tab_name)
+    logger_page.Visible = (tab_name == "LOGGER"); main_page.Visible = (tab_name == "MAIN"); misc_page.Visible = (tab_name == "MISC")
+    logger_btn.TextColor3 = (tab_name == "LOGGER") and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 160)
+    main_tab_btn.TextColor3 = (tab_name == "MAIN") and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 160)
+    misc_tab_btn.TextColor3 = (tab_name == "MISC") and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 160)
 end
-logger_btn.MouseButton1Click:Connect(function() SwitchTab("LOGGER") end)
-main_tab_btn.MouseButton1Click:Connect(function() SwitchTab("MAIN") end)
-misc_tab_btn.MouseButton1Click:Connect(function() SwitchTab("MISC") end)
-SwitchTab("LOGGER")
+
+logger_btn.MouseButton1Click:Connect(function() switch_tab("LOGGER") end)
+main_tab_btn.MouseButton1Click:Connect(function() switch_tab("MAIN") end)
+misc_tab_btn.MouseButton1Click:Connect(function() switch_tab("MISC") end)
+switch_tab("LOGGER")
 
 local log_container_ui = Instance.new("Frame", logger_page)
 log_container_ui.Size = UDim2.new(1, 0, 1, 0); log_container_ui.BackgroundColor3 = Color3.fromRGB(15, 15, 18); Instance.new("UICorner", log_container_ui).CornerRadius = UDim.new(0, 8)
@@ -392,40 +409,40 @@ local resize_btn = Instance.new("ImageButton", main_frame)
 resize_btn.Size = UDim2.new(0, 16, 0, 16); resize_btn.Position = UDim2.new(1, -18, 1, -18); resize_btn.BackgroundTransparency = 1; resize_btn.Image = "rbxassetid://12750017154"; resize_btn.ZIndex = 5
 
 local run_service = game:GetService("RunService")
-local dragging, resizing = false, false
-local drag_start, start_pos, target_pos = nil, nil, main_frame.Position
-local resize_start_pos, start_size
+local is_dragging, is_resizing = false, false
+local drag_input_pos, drag_start_offset, target_gui_pos = nil, nil, main_frame.Position
+local resize_start_input_pos, start_gui_size
 
 header_frame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true; drag_start = input.Position; start_pos = main_frame.Position
-        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        is_dragging = true; drag_input_pos = input.Position; drag_start_offset = main_frame.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then is_dragging = false end end)
     end
 end)
 
 resize_btn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        resizing = true; resize_start_pos = input.Position; start_size = main_frame.Size
-        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then resizing = false end end)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        is_resizing = true; resize_start_input_pos = input.Position; start_gui_size = main_frame.Size
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then is_resizing = false end end)
     end
 end)
 
 user_input_service.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - drag_start
-        target_pos = UDim2.new(start_pos.X.Scale, start_pos.X.Offset + delta.X, start_pos.Y.Scale, start_pos.Y.Offset + delta.Y)
-    elseif resizing and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - resize_start_pos
-        main_frame.Size = UDim2.new(0, math.max(300, start_size.X.Offset + delta.X), 0, math.max(200, start_size.Y.Offset + delta.Y))
+    if is_dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - drag_input_pos
+        target_gui_pos = UDim2.new(drag_start_offset.X.Scale, drag_start_offset.X.Offset + delta.X, drag_start_offset.Y.Scale, drag_start_offset.Y.Offset + delta.Y)
+    elseif is_resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - resize_start_input_pos
+        main_frame.Size = UDim2.new(0, math.max(300, start_gui_size.X.Offset + delta.X), 0, math.max(200, start_gui_size.Y.Offset + delta.Y))
     end
 end)
 
-run_service.RenderStepped:Connect(function() main_frame.Position = main_frame.Position:Lerp(target_pos, 0.25) end)
+run_service.RenderStepped:Connect(function() main_frame.Position = main_frame.Position:Lerp(target_gui_pos, 0.25) end)
 
-local session_start = tick()
+local session_start_time = tick()
 task.spawn(function()
     while task.wait(1) do
-        local elapsed = tick() - session_start
+        local elapsed = tick() - session_start_time
         local h, m, s = math.floor(elapsed / 3600), math.floor((elapsed % 3600) / 60), math.floor(elapsed % 60)
         clock_label.Text = string.format("TIME: %02d:%02d:%02d", h, m, s)
     end
