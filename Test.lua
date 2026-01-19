@@ -112,6 +112,7 @@ local default_settings = {
     AutoMilitary = false,
     Frost = false,
     Fallen = false,
+    Easy = false,
     AntiLag = false,
     AutoPickups = false,
     ClaimRewards = false,
@@ -408,7 +409,7 @@ local Main = Window:Tab({Title = "Main", Icon = "star"}) do
         List = current_equipped_towers,
         Value = current_equipped_towers[1],
         Callback = function(choice)
-            print("selected:", choice)
+            selected_tower = choice
         end
     })
 
@@ -920,12 +921,36 @@ local Strategies = Window:Tab({Title = "Strategies", Icon = "newspaper"}) do
         Desc = "Skill tree: MAX\n\nTowers:\nGolden Scout,\nBrawler,\nMercenary Base,\nElectroshocker,\nEngineer",
         Value = _G.Fallen,
         Callback = function(v)
-            set_setting("Frost", v)
+            set_setting("Fallen", v)
 
             if v then
                 local url = "https://raw.githubusercontent.com/DuxiiT/auto-strat/refs/heads/main/Strategies/Fallen.lua"
                 local content = game:HttpGet(url)
                 writefile("FallenMode.lua", content)
+                
+                loadstring(content)()
+
+                Window:Notify({
+                    Title = "ADS",
+                    Desc = "Successfully downloaded and will now run the Strategy!",
+                    Time = 3,
+                    Type = "normal"
+                })
+            end
+        end
+    })
+
+    Strategies:Toggle({
+        Title = "Easy Mode",
+        Desc = "Skill tree: Not needed\n\nTowers:\nNormal Scout",
+        Value = _G.Easy,
+        Callback = function(v)
+            set_setting("Easy", v)
+
+            if v then
+                local url = "https://raw.githubusercontent.com/DuxiiT/auto-strat/refs/heads/main/Strategies/Easy.lua"
+                local content = game:HttpGet(url)
+                writefile("EasyMode.lua", content)
                 
                 loadstring(content)()
 
@@ -1065,7 +1090,7 @@ mouse.Button1Down:Connect(function()
     if stack_enabled and stack_sphere and selected_tower then
         local pos = stack_sphere.Position
         local newpos = Vector3.new(pos.X, pos.Y + 25, pos.Z)
-        Remote:InvokeServer("Troops", "Pl\208\176ce", {Rotation = CFrame.new(), Position = newpos}, selected_tower)
+        remote_func:InvokeServer("Troops", "Pl\208\176ce", {Rotation = CFrame.new(), Position = newpos}, selected_tower)
     end
 end)
 
