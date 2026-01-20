@@ -157,13 +157,13 @@ local themes = {
 	},
 }
 
-local existingUI = game:GetService("CoreGui"):FindFirstChild("ADS1")
+local existingUI = game:GetService("CoreGui"):FindFirstChild("ADS")
 if existingUI then
 	existingUI:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ADS1"
+ScreenGui.Name = "ADS"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999
