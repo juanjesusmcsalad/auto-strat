@@ -67,6 +67,22 @@ end
 
 local game_state = identify_game_state()
 
+local function start_anti_afk()
+    task.spawn(function()
+        local lobby_timer = 0
+        while game_state == "LOBBY" do 
+            task.wait(1)
+            lobby_timer = lobby_timer + 1
+            if lobby_timer >= 600 then
+                teleport_service:Teleport(3260590327)
+                break 
+            end
+        end
+    end)
+end
+
+start_anti_afk()
+
 local send_request = request or http_request or httprequest
     or GetDevice and GetDevice().request
 
@@ -2416,20 +2432,6 @@ local function start_anti_lag()
     end)
 end
 
-local function start_anti_afk()
-    task.spawn(function()
-        local lobby_timer = 0
-        while game_state == "LOBBY" do 
-            task.wait(1)
-            lobby_timer = lobby_timer + 1
-            if lobby_timer >= 600 then
-                teleport_service:Teleport(3260590327)
-                break 
-            end
-        end
-    end)
-end
-
 local function start_auto_chain()
     if auto_chain_running or not _G.AutoChain then return end
     auto_chain_running = true
@@ -2713,7 +2715,5 @@ end)
 if _G.ClaimRewards and not auto_claim_rewards then
     start_claim_rewards()
 end
-
-start_anti_afk()
 
 return TDS
