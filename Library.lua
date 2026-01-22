@@ -136,6 +136,7 @@ local default_settings = {
     Fallen = false,
     Easy = false,
     AntiLag = false,
+    disable_3d_rendering = false,
     AutoPickups = false,
     ClaimRewards = false,
     SendWebhook = false,
@@ -227,7 +228,16 @@ local function set_setting(name, value)
     end
 end
 
+local function apply_3d_rendering()
+    if _G.disable_3d_rendering then
+        game:GetService("RunService"):Set3dRenderingEnabled(false)
+    else
+        run_service:Set3dRenderingEnabled(true)
+    end
+end
+
 load_settings()
+apply_3d_rendering()
 
 -- // for calculating path
 local function find_path()
@@ -934,6 +944,16 @@ local Misc = Window:Tab({Title = "Misc", Icon = "box"}) do
         Value = _G.AntiLag,
         Callback = function(v)
             set_setting("AntiLag", v)
+        end
+    })
+
+    Misc:Toggle({
+        Title = "Disable 3d rendering",
+        Desc = "Turns off 3d rendering",
+        Value = _G.disable_3d_rendering,
+        Callback = function(v)
+            set_setting("disable_3d_rendering", v)
+            apply_3d_rendering()
         end
     })
 
