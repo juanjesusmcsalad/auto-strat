@@ -136,7 +136,7 @@ local default_settings = {
     Fallen = false,
     Easy = false,
     AntiLag = false,
-    disable_3d_rendering = false,
+    Disable3DRendering = false
     AutoPickups = false,
     ClaimRewards = false,
     SendWebhook = false,
@@ -229,7 +229,7 @@ local function set_setting(name, value)
 end
 
 local function apply_3d_rendering()
-    if _G.disable_3d_rendering then
+    if _G.Disable3DRendering then
         game:GetService("RunService"):Set3dRenderingEnabled(false)
     else
         run_service:Set3dRenderingEnabled(true)
@@ -950,9 +950,9 @@ local Misc = Window:Tab({Title = "Misc", Icon = "box"}) do
     Misc:Toggle({
         Title = "Disable 3d rendering",
         Desc = "Turns off 3d rendering",
-        Value = _G.disable_3d_rendering,
+        Value = _G.Disable3DRendering,
         Callback = function(v)
-            set_setting("disable_3d_rendering", v)
+            set_setting("Disable3DRendering", v)
             apply_3d_rendering()
         end
     })
