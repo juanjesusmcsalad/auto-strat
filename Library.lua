@@ -1071,19 +1071,32 @@ local Main = Window:Tab({Title = "Main", Icon = "stamp"}) do
         Title = "Sell Selected",
         Desc = "",
         Callback = function()
-            if selected_tower then
-                for _, v in pairs(workspace.Towers:GetChildren()) do
-                    if v:FindFirstChild("TowerReplicator") and v.TowerReplicator:GetAttribute("Name") == selected_tower and v.TowerReplicator:GetAttribute("OwnerId") == local_player.UserId then
-                        remote_func:InvokeServer("Troops", "Sell", {Troop = v})
+            Window:Dialog({
+                Title = "Do you want to sell the selected towers?",
+                Button1 = {
+                    Title = "Confirm",
+                    Color = Color3.fromRGB(226, 39, 6),
+                    Callback = function()
+                        if selected_tower then
+                            for _, v in pairs(workspace.Towers:GetChildren()) do
+                                if v:FindFirstChild("TowerReplicator") and v.TowerReplicator:GetAttribute("Name") == selected_tower and v.TowerReplicator:GetAttribute("OwnerId") == local_player.UserId then
+                                    remote_func:InvokeServer("Troops", "Sell", {Troop = v})
+                                end
+                            end
+                            Window:Notify({
+                                Title = "ADS",
+                                Desc = "Attempted to sell all the selected towers!",
+                                Time = 3,
+                                Type = "normal"
+                            })
+                        end
                     end
-                end
-                Window:Notify({
-                    Title = "ADS",
-                    Desc = "Attempted to sell all the selected towers!",
-                    Time = 3,
-                    Type = "normal"
-                })
-            end
+                },
+                Button2 = {
+                    Title = "Cancel",
+                    Color = Color3.fromRGB(0, 188, 0)
+                }
+            })
         end
     })
 
@@ -1109,17 +1122,30 @@ local Main = Window:Tab({Title = "Main", Icon = "stamp"}) do
         Title = "Sell All",
         Desc = "",
         Callback = function()
-            for _, v in pairs(workspace.Towers:GetChildren()) do
-                if v:FindFirstChild("Owner") and v.Owner.Value == local_player.UserId then
-                    remote_func:InvokeServer("Troops", "Sell", {Troop = v})
-                end
-            end
+            Window:Dialog({
+                Title = "Do you want to sell all the towers?",
+                Button1 = {
+                    Title = "Confirm",
+                    Color = Color3.fromRGB(226, 39, 6),
+                    Callback = function()
+                        for _, v in pairs(workspace.Towers:GetChildren()) do
+                            if v:FindFirstChild("Owner") and v.Owner.Value == local_player.UserId then
+                                remote_func:InvokeServer("Troops", "Sell", {Troop = v})
+                            end
+                        end
 
-            Window:Notify({
-                Title = "ADS",
-                Desc = "Attempted to sell all the towers!",
-                Time = 3,
-                Type = "normal"
+                        Window:Notify({
+                            Title = "ADS",
+                            Desc = "Attempted to sell all the towers!",
+                            Time = 3,
+                            Type = "normal"
+                        })
+                    end
+                },
+                Button2 = {
+                    Title = "Cancel",
+                    Color = Color3.fromRGB(0, 188, 0)
+                }
             })
         end
     })
@@ -1186,6 +1212,229 @@ local Main = Window:Tab({Title = "Main", Icon = "stamp"}) do
             end)
         end
     })
+
+    Main:Section({Title = "Stats"})
+    local coins_label = Main:Label({Title = "Coins: 0", Desc = ""})
+    local gems_label = Main:Label({Title = "Gems: 0", Desc = ""})
+    local level_label = Main:Label({Title = "Level: 0", Desc = ""})
+    local wins_label = Main:Label({Title = "Wins: 0", Desc = ""})
+    local loses_label = Main:Label({Title = "Loses: 0", Desc = ""})
+    local exp_label = Main:Label({Title = "Experience: 0 / 0", Desc = ""})
+    local exp_slider = Main:Slider({
+        Title = "EXP",
+        Desc = "",
+        Min = 0,
+        Max = 100,
+        Rounding = 0,
+        Value = 0,
+        Callback = function()
+        end
+    })
+
+    local function parse_number(val)
+        if type(val) == "number" then
+            return val
+        end
+        if type(val) == "string" then
+            local cleaned = string.gsub(val, ",", "")
+            local n = tonumber(cleaned)
+            if n then
+                return n
+            end
+        end
+        if type(val) == "table" and val.get then
+            local ok, v = pcall(function()
+                return val:get()
+            end)
+            if ok then
+                return parse_number(v)
+            end
+        end
+        return nil
+    end
+
+    local function read_value(obj)
+        if not obj then
+            return nil
+        end
+        local ok, v = pcall(function()
+            return obj.Value
+        end)
+        if ok then
+            return parse_number(v)
+        end
+        return nil
+    end
+
+    local function get_stat_number(name)
+        local obj = local_player:FindFirstChild(name)
+        local v = read_value(obj)
+        if v ~= nil then
+            return v
+        end
+        local attr = local_player:GetAttribute(name)
+        v = parse_number(attr)
+        if v ~= nil then
+            return v
+        end
+        return nil
+    end
+
+    local function pick_exp_max()
+        local exp_obj = local_player:FindFirstChild("Experience")
+        local attr_max = exp_obj and parse_number(exp_obj:GetAttribute("Max"))
+        local attr_need = exp_obj and parse_number(exp_obj:GetAttribute("Required"))
+        local attr_next = exp_obj and parse_number(exp_obj:GetAttribute("Next"))
+        return attr_max
+            or attr_need
+            or attr_next
+            or get_stat_number("ExperienceMax")
+            or get_stat_number("ExperienceNeeded")
+            or get_stat_number("ExperienceRequired")
+            or get_stat_number("ExperienceToNextLevel")
+            or get_stat_number("ExperienceToLevel")
+            or get_stat_number("NextLevelExp")
+            or get_stat_number("ExpToNextLevel")
+            or get_stat_number("ExpNeeded")
+            or get_stat_number("ExpRequired")
+            or get_stat_number("MaxExp")
+            or get_stat_number("MaxExperience")
+            or 100
+    end
+
+    local gc_exp_cache = { t = nil, last = 0 }
+    local function get_gc_exp()
+        if not getgc then
+            return nil
+        end
+        local t = gc_exp_cache.t
+        if t then
+            local exp = parse_number(rawget(t, "exp") or rawget(t, "Exp") or rawget(t, "experience") or rawget(t, "Experience"))
+            local max_exp = parse_number(rawget(t, "maxExp") or rawget(t, "MaxExp") or rawget(t, "maxEXP") or rawget(t, "MaxEXP") or rawget(t, "maxExperience") or rawget(t, "MaxExperience"))
+            local lvl = parse_number(rawget(t, "level") or rawget(t, "Level") or rawget(t, "lvl") or rawget(t, "Lvl"))
+            if exp and max_exp then
+                return exp, max_exp, lvl
+            end
+        end
+        local now = os.clock()
+        if now - gc_exp_cache.last < 3 then
+            return nil
+        end
+        gc_exp_cache.last = now
+        local plvl = get_stat_number("Level")
+        for _, obj in ipairs(getgc(true)) do
+            if type(obj) == "table" then
+                local exp = parse_number(rawget(obj, "exp") or rawget(obj, "Exp") or rawget(obj, "experience") or rawget(obj, "Experience"))
+                local max_exp = parse_number(rawget(obj, "maxExp") or rawget(obj, "MaxExp") or rawget(obj, "maxEXP") or rawget(obj, "MaxEXP") or rawget(obj, "maxExperience") or rawget(obj, "MaxExperience"))
+                if exp and max_exp then
+                    local lvl = parse_number(rawget(obj, "level") or rawget(obj, "Level") or rawget(obj, "lvl") or rawget(obj, "Lvl"))
+                    if not plvl or not lvl or lvl == plvl then
+                        gc_exp_cache.t = obj
+                        return exp, max_exp, lvl
+                    end
+                end
+            end
+        end
+        return nil
+    end
+
+    local function update_stats()
+        local coins = get_stat_number("Coins") or 0
+        local gems = get_stat_number("Gems") or 0
+        local lvl = get_stat_number("Level") or 0
+        local wins = get_stat_number("Triumphs") or 0
+        local loses = get_stat_number("Loses") or 0
+        local exp = get_stat_number("Experience") or 0
+        local max_exp = pick_exp_max()
+        local gc_exp, gc_max, gc_lvl = get_gc_exp()
+        if gc_exp and gc_max then
+            exp = gc_exp
+            max_exp = gc_max
+            if gc_lvl then
+                lvl = gc_lvl
+            end
+        end
+        if max_exp < 1 then
+            max_exp = 1
+        end
+        if exp > max_exp then
+            max_exp = exp
+        end
+        if coins_label then coins_label:SetTitle("Coins: " .. tostring(coins)) end
+        if gems_label then gems_label:SetTitle("Gems: " .. tostring(gems)) end
+        if level_label then level_label:SetTitle("Level: " .. tostring(lvl)) end
+        if wins_label then wins_label:SetTitle("Wins: " .. tostring(wins)) end
+        if loses_label then loses_label:SetTitle("Loses: " .. tostring(loses)) end
+        if exp_label then exp_label:SetTitle("Experience: " .. tostring(exp) .. " / " .. tostring(max_exp)) end
+        if exp_slider then
+            exp_slider:SetMin(0)
+            exp_slider:SetMax(max_exp)
+            exp_slider:SetValue(exp)
+        end
+    end
+
+    local stats_queued = false
+    local function queue_stats_update()
+        if stats_queued then
+            return
+        end
+        stats_queued = true
+        task.delay(0.2, function()
+            stats_queued = false
+            update_stats()
+        end)
+    end
+
+    local function hook_stat_obj(obj)
+        if not obj then
+            return
+        end
+        if obj.Changed then
+            obj.Changed:Connect(queue_stats_update)
+        end
+        obj:GetAttributeChangedSignal("Max"):Connect(queue_stats_update)
+        obj:GetAttributeChangedSignal("Required"):Connect(queue_stats_update)
+        obj:GetAttributeChangedSignal("Next"):Connect(queue_stats_update)
+    end
+
+    local stat_names = {"Coins", "Gems", "Level", "Triumphs", "Loses", "Experience"}
+    local exp_attr_names = {
+        "ExperienceMax",
+        "ExperienceNeeded",
+        "ExperienceRequired",
+        "ExperienceToNextLevel",
+        "ExperienceToLevel",
+        "NextLevelExp",
+        "ExpToNextLevel",
+        "ExpNeeded",
+        "ExpRequired",
+        "MaxExp",
+        "MaxExperience"
+    }
+
+    for _, name in ipairs(stat_names) do
+        hook_stat_obj(local_player:FindFirstChild(name))
+        local_player:GetAttributeChangedSignal(name):Connect(queue_stats_update)
+    end
+
+    for _, name in ipairs(exp_attr_names) do
+        local_player:GetAttributeChangedSignal(name):Connect(queue_stats_update)
+    end
+
+    local_player.ChildAdded:Connect(function(child)
+        if table.find(stat_names, child.Name) then
+            hook_stat_obj(child)
+            queue_stats_update()
+        end
+    end)
+
+    local_player.ChildRemoved:Connect(function(child)
+        if table.find(stat_names, child.Name) then
+            queue_stats_update()
+        end
+    end)
+
+    queue_stats_update()
 end
 
 Window:Line()
