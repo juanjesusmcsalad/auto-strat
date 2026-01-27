@@ -875,7 +875,7 @@ TDS:GameInfo("%s", {%s})
                 pos_x, pos_y, pos_z = p.X, p.Y, p.Z
             end
             
-            local command = string.format('TDS:Place("%s", %.3f, %.3f, %.3f)', tower_name, pos_x, pos_y, pos_z)
+            local command = string.format('TDS:Place("%s", %s, %s, %s)', tower_name, tostring(pos_x), tostring(pos_y), tostring(pos_z))
             record_action(command)
             Recorder:Log("Placed " .. tower_name .. " (Index: " .. my_index .. ")")
 
