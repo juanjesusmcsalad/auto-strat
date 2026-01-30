@@ -3521,7 +3521,6 @@ local function start_auto_necro()
         local cooldown = get_ability_cooldown("Necromancer", "Raise The Dead")
 
         while _G.AutoNecro do
-            local waitTime = 0.1
             local necromancer = {}
             local towers_folder = workspace:FindFirstChild("Towers")
 
@@ -3548,12 +3547,13 @@ local function start_auto_necro()
                 )
                 if response then 
                     idx += 1 
-                    waitTime = cooldown
+                    task.wait(cooldown)
                 else
-                    waitTime = 1
+                    task.wait(1)
                 end
+            else
+                task.wait(0.1)
             end
-            task.wait(waitTime)
         end
 
         auto_necro_running = false
