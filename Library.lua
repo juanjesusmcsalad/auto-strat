@@ -3481,73 +3481,127 @@ local function start_auto_dj_booth()
     end)
 end
 
-local function get_ability_cooldown(towerName, abilityName)
-    local content = game.ReplicatedStorage:FindFirstChild("Content")
-    if not content then return nil end
-    
-    local tower = content:FindFirstChild("Tower")
-    if not tower then return nil end
-    
-    local towerFolder = tower:FindFirstChild(towerName)
-    if not towerFolder then return nil end
-    
-    local statsModule = towerFolder:FindFirstChild("Stats")
-    if not statsModule then return nil end
-    
-    local success, stats = pcall(function()
-        return require(statsModule)
-    end)
-    
-    if not success or not stats then return nil end
-    
-    local defaults = stats.Defaults
-    if not defaults or not defaults.Abilities then return nil end
-    
-    for _, ability in ipairs(defaults.Abilities) do
-        if ability.Name == abilityName then
-            return ability.Debounce
-        end
-    end
-    
-    return nil
-end
-
 local function start_auto_necro()
     if auto_necro or not _G.AutoNecro then return end
     auto_necro_running = true
 
-    task.spawn(function()
-        local idx = 1
-        local cooldown = get_ability_cooldown("Necromancer", "Raise The Dead")
+    local lastActivation = 0
+    local ownerId = game.Players.LocalPlayer.UserId
 
-        while _G.AutoNecro do
-            local necromancer = {}
-            local towers_folder = workspace:FindFirstChild("Towers")
+    local function getNecros(towersFolder)
+        local list = {}
+        if not towersFolder then
+            return list
+        end
+        for _, rep in ipairs(towersFolder:GetDescendants()) do
+            if rep:IsA("Folder") and rep.Name == "TowerReplicator"
+            and rep:GetAttribute("Name") == "Necromancer"
+            and rep:GetAttribute("OwnerId") == ownerId then
+                list[#list + 1] = rep.Parent
+            end
+        end
+        return list
+    end
 
-            if towers_folder then
-                for _, towers in ipairs(towers_folder:GetDescendants()) do
-                    if towers:IsA("Folder") and towers.Name == "TowerReplicator"
-                    and towers:GetAttribute("Name") == "Necromancer"
-                    and towers:GetAttribute("OwnerId") == game.Players.LocalPlayer.UserId
-                    and (towers:GetAttribute("Upgrade") or 0) >= 0 then
-                        necromancer[#necromancer + 1] = towers.Parent
+    local function pickMaxGraves(rep, graveStore, up)
+        local maxGraves = rep and rep:GetAttribute("Max_Graves")
+        if graveStore then
+            local gMax = graveStore:GetAttribute("Max_Graves")
+            if type(gMax) == "number" and gMax > 0 then
+                maxGraves = gMax
+            end
+        end
+        if not maxGraves or maxGraves < 2 then
+            if up >= 4 then
+                maxGraves = 9
+            elseif up >= 2 then
+                maxGraves = 6
+            else
+                maxGraves = 3
+            end
+        end
+        return maxGraves
+    end
+
+    local function countGraves(graveStore)
+        if not graveStore then
+            return 0
+        end
+        local cnt = 0
+        for k, v in pairs(graveStore:GetAttributes()) do
+            if type(k) == "string" and #k > 20 then
+                local isDestroy = false
+                if type(v) == "table" then
+                    for _, elem in pairs(v) do
+                        if tostring(elem) == "Destroy" then
+                            isDestroy = true
+                            break
+                        end
                     end
+                elseif tostring(v):find("Destroy") then
+                    isDestroy = true
+                end
+                if isDestroy then
+                    graveStore:SetAttribute(k, nil)
+                else
+                    cnt += 1
                 end
             end
-            if #necromancer >= 1 and necromancer ~= nil then
+        end
+        return cnt
+    end
+
+    local function cleanAllGraves(list)
+        for _, necro in ipairs(list) do
+            local rep = necro and necro:FindFirstChild("TowerReplicator")
+            local store = rep and rep:FindFirstChild("GraveStone")
+            if store then
+                countGraves(store)
+            end
+        end
+    end
+
+    task.spawn(function()
+        local idx = 1
+
+        while _G.AutoNecro do
+            local towers_folder = workspace:FindFirstChild("Towers")
+            local necromancer = getNecros(towers_folder)
+            cleanAllGraves(necromancer)
+            
+            if #necromancer >= 1 then
                 if idx > #necromancer then idx = 1 end
                 local current_necromancer = necromancer[idx]
                 local replicator = current_necromancer:FindFirstChild("TowerReplicator")
-                local upgrade_level = replicator and replicator:GetAttribute("Upgrade") or 0
-                local response = remote_func:InvokeServer(
-                    "Troops",
-                    "Abilities",
-                    "Activate",
-                    { Troop = current_necromancer, Name = "Raise The Dead", Data = {} }
-                )
-                if response then 
-                    idx += 1 
+
+                local up = replicator and (replicator:GetAttribute("Upgrade") or 0) or 0
+                local graveStore = replicator and replicator:FindFirstChild("GraveStone")
+                local maxGraves = pickMaxGraves(replicator, graveStore, up)
+                local graveCount = countGraves(graveStore)
+                local debounce = (replicator and replicator:GetAttribute("AbilityDebounce")) or 5
+                local now = os.clock()
+
+                if maxGraves and graveCount >= maxGraves and (now - lastActivation >= debounce) then
+                    print("AutoNecro Activating! Graves: " .. tostring(graveCount) .. "/" .. tostring(maxGraves))
+                    local response = remote_func:InvokeServer(
+                        "Troops",
+                        "Abilities",
+                        "Activate",
+                        { Troop = current_necromancer, Name = "Raise The Dead", Data = {} }
+                    )
+                    
+                    if response then 
+                        lastActivation = now
+                        idx += 1
+                        task.wait(1)
+                    else
+                        task.wait(0.5)
+                    end
+                else
+                    task.wait(0.1)
                 end
+            else
+                task.wait(1)
             end
         end
 
