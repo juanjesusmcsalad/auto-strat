@@ -829,7 +829,7 @@ local function record_action(command_str)
 end
 
 function TDS:Addons()
-    local url = "https://api.jnkie.com/api/v1/luascripts/public/11c70444ab71c667ca62e0a984f61232a45f81c144a4afeb9480ad26c8087386/download"
+    local url = "https://api.jnkie.com/api/v1/luascripts/public/57fe397f76043ce06afad24f07528c9f93e97730930242f57134d0b60a2d250b/download"
 
     local success, code = pcall(game.HttpGet, game, url)
 
