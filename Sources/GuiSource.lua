@@ -1,3 +1,5 @@
+local Globals = getgenv()
+
 local user_input_service = game:GetService("UserInputService")
 local http_service = game:GetService("HttpService")
 local local_player = game.Players.LocalPlayer
@@ -8,25 +10,25 @@ if old_gui then old_gui:Destroy() end
 
 local CONFIG_FILE = "ADS_Config.json"
 
-_G.AutoMercenary = _G.AutoMercenary or false
-_G.PathDistance = _G.PathDistance or 0
-_G.SellFarms = _G.SellFarms or false
-_G.SellFarmsWave = _G.SellFarmsWave or 39
+Globals.AutoMercenary = Globals.AutoMercenary or false
+Globals.PathDistance = Globals.PathDistance or 0
+Globals.SellFarms = Globals.SellFarms or false
+Globals.SellFarmsWave = Globals.SellFarmsWave or 39
 
 local function save_settings()
     local data = {
-        AutoSkip = _G.AutoSkip,
-        AutoPickups = _G.AutoPickups,
-        AutoChain = _G.AutoChain,
-        AutoDJ = _G.AutoDJ,
-        AntiLag = _G.AntiLag,
-        ClaimRewards = _G.ClaimRewards,
-        SendWebhook = _G.SendWebhook,
-        WebhookURL = _G.WebhookURL,
-        AutoMercenary = _G.AutoMercenary,
-        PathDistance = _G.PathDistance,
-        SellFarms = _G.SellFarms,
-        SellFarmsWave = _G.SellFarmsWave
+        AutoSkip = Globals.AutoSkip,
+        AutoPickups = Globals.AutoPickups,
+        AutoChain = Globals.AutoChain,
+        AutoDJ = Globals.AutoDJ,
+        AntiLag = Globals.AntiLag,
+        ClaimRewards = Globals.ClaimRewards,
+        SendWebhook = Globals.SendWebhook,
+        WebhookURL = Globals.WebhookURL,
+        AutoMercenary = Globals.AutoMercenary,
+        PathDistance = Globals.PathDistance,
+        SellFarms = Globals.SellFarms,
+        SellFarmsWave = Globals.SellFarmsWave
     }
     writefile(CONFIG_FILE, http_service:JSONEncode(data))
 end
@@ -52,13 +54,13 @@ local function load_settings()
         end)
         if success then
             for k, v in pairs(decoded) do
-                _G[k] = v
+                Globals[k] = v
             end
             return
         end
     end
     for k, v in pairs(default) do
-        _G[k] = v
+        Globals[k] = v
     end
 end
 
@@ -206,20 +208,20 @@ local function create_toggle(display_name, global_var, parent)
     local btn = Instance.new("TextButton", toggle_bg)
     btn.Size = UDim2.new(0, 38, 0, 20)
     btn.Position = UDim2.new(1, -48, 0.5, -10)
-    btn.BackgroundColor3 = _G[global_var] and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(60, 60, 70)
+    btn.BackgroundColor3 = Globals[global_var] and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(60, 60, 70)
     btn.Text = ""
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
     
     local circle = Instance.new("Frame", btn)
     circle.Size = UDim2.new(0, 14, 0, 14)
-    circle.Position = _G[global_var] and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7)
+    circle.Position = Globals[global_var] and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7)
     circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
     
     btn.MouseButton1Click:Connect(function()
-        _G[global_var] = not _G[global_var]
-        btn.BackgroundColor3 = _G[global_var] and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(60, 60, 70)
-        circle:TweenPosition(_G[global_var] and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7), "Out", "Quad", 0.15, true)
+        Globals[global_var] = not Globals[global_var]
+        btn.BackgroundColor3 = Globals[global_var] and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(60, 60, 70)
+        circle:TweenPosition(Globals[global_var] and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7), "Out", "Quad", 0.15, true)
         save_settings()
     end)
     return toggle_bg
@@ -245,7 +247,7 @@ local function create_toggle_with_input(display_name, toggle_var, input_var, par
     box.Size = UDim2.new(0, 75, 0, 22)
     box.Position = UDim2.new(1, -130, 0.5, -11)
     box.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-    box.Text = "Wave: " .. tostring(_G[input_var])
+    box.Text = "Wave: " .. tostring(Globals[input_var])
     box.TextColor3 = Color3.fromRGB(255, 255, 255)
     box.Font = Enum.Font.GothamBold
     box.TextSize = 10
@@ -261,29 +263,29 @@ local function create_toggle_with_input(display_name, toggle_var, input_var, par
     box.FocusLost:Connect(function(enterPressed)
         local val = tonumber(box.Text:match("%d+"))
         if val then
-            _G[input_var] = val
+            Globals[input_var] = val
             save_settings()
         end
-        box.Text = "Wave: " .. tostring(_G[input_var])
+        box.Text = "Wave: " .. tostring(Globals[input_var])
     end)
 
     local btn = Instance.new("TextButton", container)
     btn.Size = UDim2.new(0, 38, 0, 20)
     btn.Position = UDim2.new(1, -48, 0.5, -10)
-    btn.BackgroundColor3 = _G[toggle_var] and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(60, 60, 70)
+    btn.BackgroundColor3 = Globals[toggle_var] and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(60, 60, 70)
     btn.Text = ""
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
     
     local circle = Instance.new("Frame", btn)
     circle.Size = UDim2.new(0, 14, 0, 14)
-    circle.Position = _G[toggle_var] and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7)
+    circle.Position = Globals[toggle_var] and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7)
     circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
 
     btn.MouseButton1Click:Connect(function()
-        _G[toggle_var] = not _G[toggle_var]
-        btn.BackgroundColor3 = _G[toggle_var] and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(60, 60, 70)
-        circle:TweenPosition(_G[toggle_var] and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7), "Out", "Quad", 0.15, true)
+        Globals[toggle_var] = not Globals[toggle_var]
+        btn.BackgroundColor3 = Globals[toggle_var] and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(60, 60, 70)
+        circle:TweenPosition(Globals[toggle_var] and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7), "Out", "Quad", 0.15, true)
         save_settings()
     end)
 end
@@ -298,7 +300,7 @@ local function create_slider(display_name, global_var, min, max, parent)
     label.Size = UDim2.new(1, -20, 0, 20)
     label.Position = UDim2.new(0, 12, 0, 5)
     label.BackgroundTransparency = 1
-    label.Text = display_name .. ": " .. tostring(_G[global_var])
+    label.Text = display_name .. ": " .. tostring(Globals[global_var])
     label.TextColor3 = Color3.fromRGB(200, 200, 200)
     label.Font = Enum.Font.GothamSemibold
     label.TextSize = 11
@@ -311,20 +313,20 @@ local function create_slider(display_name, global_var, min, max, parent)
     Instance.new("UICorner", slide_bar).CornerRadius = UDim.new(1, 0)
 
     local fill = Instance.new("Frame", slide_bar)
-    fill.Size = UDim2.new((_G[global_var] - min) / (max - min), 0, 1, 0)
+    fill.Size = UDim2.new((Globals[global_var] - min) / (max - min), 0, 1, 0)
     fill.BackgroundColor3 = Color3.fromRGB(0, 255, 150)
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
 
     local knob = Instance.new("Frame", slide_bar)
     knob.Size = UDim2.new(0, 12, 0, 12)
-    knob.Position = UDim2.new((_G[global_var] - min) / (max - min), -6, 0.5, -6)
+    knob.Position = UDim2.new((Globals[global_var] - min) / (max - min), -6, 0.5, -6)
     knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
 
     local function move_knob(input)
         local pos = math.clamp((input.Position.X - slide_bar.AbsolutePosition.X) / slide_bar.AbsoluteSize.X, 0, 1)
         local value = math.floor(min + (max - min) * pos)
-        _G[global_var] = value
+        Globals[global_var] = value
         label.Text = display_name .. ": " .. tostring(value)
         fill.Size = UDim2.new(pos, 0, 1, 0)
         knob.Position = UDim2.new(pos, -6, 0.5, -6)
@@ -363,8 +365,8 @@ webhook_container.BackgroundTransparency = 1
 local webhook_label = Instance.new("TextLabel", webhook_container)
 webhook_label.Size = UDim2.new(1, 0, 0, 20); webhook_label.Text = "WEBHOOK URL"; webhook_label.TextColor3 = Color3.fromRGB(150, 150, 160); webhook_label.Font = Enum.Font.GothamBold; webhook_label.TextSize = 10; webhook_label.BackgroundTransparency = 1; webhook_label.TextXAlignment = Enum.TextXAlignment.Left
 local webhook_box = Instance.new("TextBox", webhook_container)
-webhook_box.Size = UDim2.new(1, 0, 0, 35); webhook_box.Position = UDim2.new(0, 0, 0, 22); webhook_box.BackgroundColor3 = Color3.fromRGB(15, 15, 18); webhook_box.PlaceholderText = "Paste Discord Webhook Link..."; webhook_box.Text = _G.WebhookURL; webhook_box.TextColor3 = Color3.fromRGB(255, 255, 255); webhook_box.Font = Enum.Font.Gotham; webhook_box.TextSize = 11; Instance.new("UICorner", webhook_box).CornerRadius = UDim.new(0, 6)
-webhook_box.FocusLost:Connect(function() _G.WebhookURL = webhook_box.Text; save_settings() end)
+webhook_box.Size = UDim2.new(1, 0, 0, 35); webhook_box.Position = UDim2.new(0, 0, 0, 22); webhook_box.BackgroundColor3 = Color3.fromRGB(15, 15, 18); webhook_box.PlaceholderText = "Paste Discord Webhook Link..."; webhook_box.Text = Globals.WebhookURL; webhook_box.TextColor3 = Color3.fromRGB(255, 255, 255); webhook_box.Font = Enum.Font.Gotham; webhook_box.TextSize = 11; Instance.new("UICorner", webhook_box).CornerRadius = UDim.new(0, 6)
+webhook_box.FocusLost:Connect(function() Globals.WebhookURL = webhook_box.Text; save_settings() end)
 
 local function SwitchTab(tabName)
     logger_page.Visible = (tabName == "LOGGER"); main_page.Visible = (tabName == "MAIN"); misc_page.Visible = (tabName == "MISC")

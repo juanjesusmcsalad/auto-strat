@@ -2948,7 +2948,7 @@ function Library:Window(p)
 						"error", "warn", "tick", "assert", "shared", "loadstring", "tonumber", "tostring", "type",
 						"typeof", "unpack", "print", "Instance", "CFrame", "Vector3", "Vector2", "Color3", "UDim", "UDim2", "Ray", "BrickColor",
 						"OverlapParams", "RaycastParams", "Axes", "Random", "Region3", "Rect", "TweenInfo",
-						"collectgarbage", "not", "utf8", "pcall", "xpcall", "_G", "setmetatable", "getmetatable", "os", "pairs", "ipairs"
+						"collectgarbage", "not", "utf8", "pcall", "xpcall", "getgenv", "setmetatable", "getmetatable", "os", "pairs", "ipairs"
 					},
 					operators = {
 						"#", "+", "-", "*", "%", "/", "^", "=", "~", "=", "<", ">",

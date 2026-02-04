@@ -1,3 +1,5 @@
+local Globals = getgenv()
+
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 -- // services & main refs
@@ -202,7 +204,7 @@ shared.TDS_Table = TDS
 local function save_settings()
     local data_to_save = {}
     for key, _ in pairs(default_settings) do
-        data_to_save[key] = _G[key]
+        data_to_save[key] = Globals[key]
     end
     writefile(file_name, http_service:JSONEncode(data_to_save))
 end
@@ -216,9 +218,9 @@ local function load_settings()
         if success and type(data) == "table" then
             for key, default_val in pairs(default_settings) do
                 if data[key] ~= nil then
-                    _G[key] = data[key]
+                    Globals[key] = data[key]
                 else
-                    _G[key] = default_val
+                    Globals[key] = default_val
                 end
             end
             return
@@ -226,27 +228,27 @@ local function load_settings()
     end
     
     for key, value in pairs(default_settings) do
-        _G[key] = value
+        Globals[key] = value
     end
     save_settings()
 end
 
 local function set_setting(name, value)
     if default_settings[name] ~= nil then
-        _G[name] = value
+        Globals[name] = value
         save_settings()
     end
 end
 
 local function apply_3d_rendering()
-    if _G.Disable3DRendering then
+    if Globals.Disable3DRendering then
         game:GetService("RunService"):Set3dRenderingEnabled(false)
     else
         run_service:Set3dRenderingEnabled(true)
     end
     local player_gui = local_player:FindFirstChild("PlayerGui")
     local gui = player_gui and player_gui:FindFirstChild("ADS_BlackScreen")
-    if _G.Disable3DRendering then
+    if Globals.Disable3DRendering then
         if player_gui and not gui then
             gui = Instance.new("ScreenGui")
             gui.Name = "ADS_BlackScreen"
@@ -327,7 +329,7 @@ local function startTagChanger()
     end
     isTagChangerRunning = true
     task.spawn(function()
-        while _G.tagName and _G.tagName ~= "" and _G.tagName ~= "None" do
+        while Globals.tagName and Globals.tagName ~= "" and Globals.tagName ~= "None" do
             local tag = local_player:FindFirstChild("Tag")
             if tag then
                 if tagChangerTag ~= tag then
@@ -340,14 +342,14 @@ local function startTagChanger()
                         tagChangerOrig = tag.Value
                     end
                 end
-                if tag.Value ~= _G.tagName then
-                    tag.Value = _G.tagName
+                if tag.Value ~= Globals.tagName then
+                    tag.Value = Globals.tagName
                 end
                 if not tagChangerConn then
                     tagChangerConn = tag:GetPropertyChangedSignal("Value"):Connect(function()
-                        if _G.tagName and _G.tagName ~= "" and _G.tagName ~= "None" then
-                            if tag.Value ~= _G.tagName then
-                                tag.Value = _G.tagName
+                        if Globals.tagName and Globals.tagName ~= "" and Globals.tagName ~= "None" then
+                            if tag.Value ~= Globals.tagName then
+                                tag.Value = Globals.tagName
                             end
                         end
                     end)
@@ -359,7 +361,7 @@ local function startTagChanger()
     end)
 end
 
-if _G.tagName and _G.tagName ~= "" and _G.tagName ~= "None" then
+if Globals.tagName and Globals.tagName ~= "" and Globals.tagName ~= "None" then
     startTagChanger()
 end
 
@@ -398,7 +400,7 @@ local function make_spoof_name()
 end
 
 local function ensure_spoof_name()
-    local nm = _G.StreamerName
+    local nm = Globals.StreamerName
     if not nm or nm == "" then
         nm = make_spoof_name()
         set_setting("StreamerName", nm)
@@ -407,7 +409,7 @@ local function ensure_spoof_name()
 end
 
 local function is_tag_changer_active()
-    return _G.tagName and _G.tagName ~= "" and _G.tagName ~= "None"
+    return Globals.tagName and Globals.tagName ~= "" and Globals.tagName ~= "None"
 end
 
 local function set_local_display_name(nm)
@@ -488,10 +490,10 @@ local function restore_spoof_text()
 end
 
 local function get_privacy_name()
-    if _G.StreamerMode then
+    if Globals.StreamerMode then
         return ensure_spoof_name()
     end
-    if _G.HideUsername then
+    if Globals.HideUsername then
         return "████████"
     end
     return nil
@@ -565,7 +567,7 @@ local function apply_streamer_tag()
         streamer_tag_conn = nil
     end
     streamer_tag_conn = tag:GetPropertyChangedSignal("Value"):Connect(function()
-        if not _G.StreamerMode then
+        if not Globals.StreamerMode then
             return
         end
         if is_tag_changer_active() then
@@ -605,7 +607,7 @@ local function apply_privacy_once()
     if last_spoof_name and last_spoof_name ~= nm then
         restore_spoof_text()
     end
-    if _G.StreamerMode then
+    if Globals.StreamerMode then
         apply_streamer_tag()
     else
         restore_streamer_tag()
@@ -770,7 +772,7 @@ local function get_point_at_distance(path_nodes, distance)
 end
 
 local function update_path_visuals()
-    if not _G.PathVisuals then
+    if not Globals.PathVisuals then
         if mil_marker then 
             mil_marker:Destroy() 
             mil_marker = nil 
@@ -805,8 +807,8 @@ local function update_path_visuals()
         merc_marker.Parent = workspace
     end
 
-    local mil_pos = get_point_at_distance(path_nodes, _G.MilitaryPath or 0)
-    local merc_pos = get_point_at_distance(path_nodes, _G.MercenaryPath or 0)
+    local mil_pos = get_point_at_distance(path_nodes, Globals.MilitaryPath or 0)
+    local merc_pos = get_point_at_distance(path_nodes, Globals.MercenaryPath or 0)
 
     if mil_pos then
         mil_marker.Position = mil_pos + Vector3.new(0, 0.2, 0)
@@ -894,7 +896,7 @@ local Autostrat = Window:Tab({Title = "Autostrat", Icon = "star"}) do
     Autostrat:Toggle({
         Title = "Auto Rejoin",
         Desc = "Rejoins the gamemode after you've won and does the strategy again.",
-        Value = _G.AutoRejoin,
+        Value = Globals.AutoRejoin,
         Callback = function(v)
             set_setting("AutoRejoin", v)
         end
@@ -903,7 +905,7 @@ local Autostrat = Window:Tab({Title = "Autostrat", Icon = "star"}) do
     Autostrat:Toggle({
         Title = "Auto Skip Waves",
         Desc = "Skips all Waves",
-        Value = _G.AutoSkip,
+        Value = Globals.AutoSkip,
         Callback = function(v)
             set_setting("AutoSkip", v)
         end
@@ -912,7 +914,7 @@ local Autostrat = Window:Tab({Title = "Autostrat", Icon = "star"}) do
     Autostrat:Toggle({
         Title = "Auto Chain",
         Desc = "Chains Commander Ability",
-        Value = _G.AutoChain,
+        Value = Globals.AutoChain,
         Callback = function(v)
             set_setting("AutoChain", v)
         end
@@ -921,7 +923,7 @@ local Autostrat = Window:Tab({Title = "Autostrat", Icon = "star"}) do
     Autostrat:Toggle({
         Title = "Support Caravan",
         Desc = "Uses Commander Support Caravan",
-        Value = _G.SupportCaravan,
+        Value = Globals.SupportCaravan,
         Callback = function(v)
             set_setting("SupportCaravan", v)
         end
@@ -930,7 +932,7 @@ local Autostrat = Window:Tab({Title = "Autostrat", Icon = "star"}) do
     Autostrat:Toggle({
         Title = "Auto DJ Booth",
         Desc = "Uses DJ Booth Ability",
-        Value = _G.AutoDJ,
+        Value = Globals.AutoDJ,
         Callback = function(v)
             set_setting("AutoDJ", v)
         end
@@ -939,7 +941,7 @@ local Autostrat = Window:Tab({Title = "Autostrat", Icon = "star"}) do
     Autostrat:Toggle({
         Title = "Auto Necro",
         Desc = "Uses Necromancer Ability",
-        Value = _G.AutoNecro,
+        Value = Globals.AutoNecro,
         Callback = function(v)
             set_setting("AutoNecro", v)
         end
@@ -948,7 +950,7 @@ local Autostrat = Window:Tab({Title = "Autostrat", Icon = "star"}) do
     Autostrat:Dropdown({
         Title = "Modifiers:",
         List = All_Modifiers,
-        Value = _G.Modifiers,
+        Value = Globals.Modifiers,
         Multi = true,
         Callback = function(choice)
             set_setting("Modifiers", choice)
@@ -959,7 +961,7 @@ local Autostrat = Window:Tab({Title = "Autostrat", Icon = "star"}) do
     Autostrat:Toggle({
         Title = "Sell Farms",
         Desc = "Sells all your farms on the specified wave",
-        Value = _G.SellFarms,
+        Value = Globals.SellFarms,
         Callback = function(v)
             set_setting("SellFarms", v)
         end
@@ -969,7 +971,7 @@ local Autostrat = Window:Tab({Title = "Autostrat", Icon = "star"}) do
         Title = "Wave:",
         Desc = "Wave to sell farms",
         Placeholder = "40",
-        Value = tostring(_G.SellFarmsWave),
+        Value = tostring(Globals.SellFarmsWave),
         ClearTextOnFocus = false,
         Callback = function(text)
             local number = tonumber(text)
@@ -990,7 +992,7 @@ local Autostrat = Window:Tab({Title = "Autostrat", Icon = "star"}) do
     Autostrat:Toggle({
         Title = "Enable Path Distance Marker",
         Desc = "Red = Mercenary Base, Green = Military Baset",
-        Value = _G.PathVisuals,
+        Value = Globals.PathVisuals,
         Callback = function(v)
             set_setting("PathVisuals", v)
         end
@@ -999,7 +1001,7 @@ local Autostrat = Window:Tab({Title = "Autostrat", Icon = "star"}) do
     Autostrat:Toggle({
         Title = "Auto Mercenary Base",
         Desc = "Uses Air-Drop Ability",
-        Value = _G.AutoMercenary,
+        Value = Globals.AutoMercenary,
         Callback = function(v)
             set_setting("AutoMercenary", v)
         end
@@ -1010,7 +1012,7 @@ local Autostrat = Window:Tab({Title = "Autostrat", Icon = "star"}) do
         Min = 0,
         Max = 300,
         Rounding = 0,
-        Value = _G.MercenaryPath,
+        Value = Globals.MercenaryPath,
         Callback = function(val)
             set_setting("MercenaryPath", val)
         end
@@ -1019,7 +1021,7 @@ local Autostrat = Window:Tab({Title = "Autostrat", Icon = "star"}) do
     Autostrat:Toggle({
         Title = "Auto Military Base",
         Desc = "Uses Airstrike Ability",
-        Value = _G.AutoMilitary,
+        Value = Globals.AutoMilitary,
         Callback = function(v)
             set_setting("AutoMilitary", v)
         end
@@ -1030,7 +1032,7 @@ local Autostrat = Window:Tab({Title = "Autostrat", Icon = "star"}) do
         Min = 0,
         Max = 300,
         Rounding = 0,
-        Value = _G.MilitaryPath,
+        Value = Globals.MilitaryPath,
         Callback = function(val)
             set_setting("MilitaryPath", val)
         end
@@ -1251,7 +1253,7 @@ local Main = Window:Tab({Title = "Main", Icon = "stamp"}) do
     Main:Section({Title = "Gatling Gun"})
     Main:Toggle({
         Title = "Auto Gatling Enabled",
-        Value = _G.GatlingEnabled,
+        Value = Globals.GatlingEnabled,
         Callback = function(state)
             if not TDS.Equip then
                 Window:Notify({
@@ -1274,7 +1276,7 @@ local Main = Window:Tab({Title = "Main", Icon = "stamp"}) do
         Title = "Gatling Multiply",
         Min = 1,
         Max = 50,
-        Value = _G.GatlingMultiply,
+        Value = Globals.GatlingMultiply,
         Callback = function(val)
             set_setting("GatlingMultiply", val)
             TDS.GatlingConfig.Multiply = val
@@ -1285,7 +1287,7 @@ local Main = Window:Tab({Title = "Main", Icon = "stamp"}) do
         Title = "Gatling Cooldown",
         Min = 0.01,
         Max = 1,
-        Value = _G.GatlingCooldown,
+        Value = Globals.GatlingCooldown,
         Callback = function(val)
             set_setting("GatlingCooldown", val)
             TDS.GatlingConfig.Cooldown = val
@@ -1297,7 +1299,7 @@ local Main = Window:Tab({Title = "Main", Icon = "stamp"}) do
         Desc = "Target enemies this close to the exit first",
         Min = 10,
         Max = 200,
-        Value = _G.GatlingCriticalRange,
+        Value = Globals.GatlingCriticalRange,
         Callback = function(val)
             set_setting("GatlingCriticalRange", val)
             TDS.GatlingConfig.CriticalRange = val
@@ -1535,7 +1537,7 @@ local Strategies = Window:Tab({Title = "Strategies", Icon = "newspaper"}) do
     Strategies:Toggle({
         Title = "Frost Mode",
         Desc = "Skill tree: MAX\n\nTowers:\nGolden Scout,\nFirework Technician,\nHacker,\nBrawler,\nDJ Booth,\nCommander,\nEngineer,\nAccelerator,\nTurret,\nMercenary Base",
-        Value = _G.Frost,
+        Value = Globals.Frost,
         Callback = function(v)
             set_setting("Frost", v)
 
@@ -1561,7 +1563,7 @@ local Strategies = Window:Tab({Title = "Strategies", Icon = "newspaper"}) do
     Strategies:Toggle({
         Title = "Fallen Mode",
         Desc = "Skill tree: Not needed\n\nTowers:\nGolden Scout,\nBrawler,\nMercenary Base,\nElectroshocker,\nEngineer",
-        Value = _G.Fallen,
+        Value = Globals.Fallen,
         Callback = function(v)
             set_setting("Fallen", v)
 
@@ -1587,7 +1589,7 @@ local Strategies = Window:Tab({Title = "Strategies", Icon = "newspaper"}) do
     Strategies:Toggle({
         Title = "Intermediate Mode",
         Desc = "Skill tree: Not needed\n\nTowers:\nShotgunner,\nCrook Boss",
-        Value = _G.Intermediate,
+        Value = Globals.Intermediate,
         Callback = function(v)
             set_setting("Intermediate", v)
 
@@ -1613,7 +1615,7 @@ local Strategies = Window:Tab({Title = "Strategies", Icon = "newspaper"}) do
     Strategies:Toggle({
         Title = "Casual Mode",
         Desc = "Skill tree: Not needed\n\nTowers:\nShotgunner",
-        Value = _G.Casual,
+        Value = Globals.Casual,
         Callback = function(v)
             set_setting("Casual", v)
 
@@ -1639,7 +1641,7 @@ local Strategies = Window:Tab({Title = "Strategies", Icon = "newspaper"}) do
     Strategies:Toggle({
         Title = "Easy Mode",
         Desc = "Skill tree: Not needed\n\nTowers:\nNormal Scout",
-        Value = _G.Easy,
+        Value = Globals.Easy,
         Callback = function(v)
             set_setting("Easy", v)
 
@@ -1666,7 +1668,7 @@ local Strategies = Window:Tab({Title = "Strategies", Icon = "newspaper"}) do
     Strategies:Toggle({
         Title = "Hardcore Mode",
         Desc = "Towers:\nFarm,\nGolden Scout,\nDJ Booth,\nCommander,\nElectroshocker,\nRanger,\nFreezer,\nGolden Minigunner",
-        Value = _G.Hardcore,
+        Value = Globals.Hardcore,
         Callback = function(v)
             set_setting("Hardcore", v)
 
@@ -1697,7 +1699,7 @@ local Misc = Window:Tab({Title = "Misc", Icon = "box"}) do
     Misc:Toggle({
         Title = "Enable Anti-Lag",
         Desc = "Boosts your FPS",
-        Value = _G.AntiLag,
+        Value = Globals.AntiLag,
         Callback = function(v)
             set_setting("AntiLag", v)
         end
@@ -1706,7 +1708,7 @@ local Misc = Window:Tab({Title = "Misc", Icon = "box"}) do
     Misc:Toggle({
         Title = "Disable 3d rendering",
         Desc = "Turns off 3d rendering",
-        Value = _G.Disable3DRendering,
+        Value = Globals.Disable3DRendering,
         Callback = function(v)
             set_setting("Disable3DRendering", v)
             apply_3d_rendering()
@@ -1716,7 +1718,7 @@ local Misc = Window:Tab({Title = "Misc", Icon = "box"}) do
     Misc:Toggle({
         Title = "Auto Collect Pickups",
         Desc = "Collects Logbooks + Snowballs",
-        Value = _G.AutoPickups,
+        Value = Globals.AutoPickups,
         Callback = function(v)
             set_setting("AutoPickups", v)
         end
@@ -1726,7 +1728,7 @@ local Misc = Window:Tab({Title = "Misc", Icon = "box"}) do
         Title = "Pickup Method",
         Desc = "",
         List = {"Pathfinding", "Instant"},
-        Value = _G.PickupMethod or "Pathfinding",
+        Value = Globals.PickupMethod or "Pathfinding",
         Callback = function(choice)
             local selected = type(choice) == "table" and choice[1] or choice
             if not selected or selected == "" then
@@ -1739,7 +1741,7 @@ local Misc = Window:Tab({Title = "Misc", Icon = "box"}) do
     Misc:Toggle({
         Title = "Claim Rewards",
         Desc = "Claims your playtime and uses spin tickets in Lobby",
-        Value = _G.ClaimRewards,
+        Value = Globals.ClaimRewards,
         Callback = function(v)
             set_setting("ClaimRewards", v)
         end
@@ -1750,7 +1752,7 @@ local Misc = Window:Tab({Title = "Misc", Icon = "box"}) do
         Title = "Cooldown:",
         Desc = "",
         Placeholder = "0.01",
-        Value = _G.Cooldown,
+        Value = Globals.Cooldown,
         ClearTextOnFocus = true,
         Callback = function(value)
             if value ~= 0 then
@@ -1763,7 +1765,7 @@ local Misc = Window:Tab({Title = "Misc", Icon = "box"}) do
         Title = "Multiply:",
         Desc = "",
         Placeholder = "60",
-        Value = _G.Multiply,
+        Value = Globals.Multiply,
         ClearTextOnFocus = true,
         Callback = function(value)
             if value ~= 0 then
@@ -1790,11 +1792,11 @@ local Misc = Window:Tab({Title = "Misc", Icon = "box"}) do
                     local cam = require(game.ReplicatedStorage.Content.Tower["Gatling Gun"].Animator.CameraController)
                     local pos = cam.result and cam.result.Position or cam.position
                     
-                    for i = 1, _G.Multiply do
+                    for i = 1, Globals.Multiply do
                         ggchannel:fireServer("Fire", pos, workspace:GetAttribute("Sync"), workspace:GetServerTimeNow())
                     end
                     
-                    self:Wait(_G.Cooldown)
+                    self:Wait(Globals.Cooldown)
                 end
             else
                 Window:Notify({
@@ -1875,7 +1877,7 @@ end
 Window:Line()
 
 -- local RecorderInit = loadstring(game:HttpGet("https://raw.githubusercontent.com/DuxiiT/auto-strat/refs/heads/main/Sources/Recorder.lua"))()
-local RecorderInit = loadstring(game:HttpGet("https://raw.githubusercontent.com/DuxiiT/auto-strat/refs/heads/main/Sources/Recorder.lua"))()
+local RecorderInit = loadstring(game:HttpGet("https://raw.githubusercontent.com/DeadSignalFound/auto-strat/refs/heads/main/Sources/Recorder.lua"))()
 RecorderInit({
     Window = Window,
     replicated_storage = replicated_storage,
@@ -1919,7 +1921,7 @@ local Settings = Window:Tab({Title = "Settings", Icon = "settings"}) do
     Settings:Toggle({
         Title = "Hide Username",
         Desc = "",
-        Value = _G.HideUsername,
+        Value = Globals.HideUsername,
         Callback = function(v)
             set_setting("HideUsername", v)
             update_privacy_state()
@@ -1930,7 +1932,7 @@ local Settings = Window:Tab({Title = "Settings", Icon = "settings"}) do
         Title = "Streamer Name",
         Desc = "",
         Placeholder = "Spoof Name",
-        Value = _G.StreamerName or "",
+        Value = Globals.StreamerName or "",
         ClearTextOnFocus = false,
         Callback = function(value)
             set_setting("StreamerName", value or "")
@@ -1941,7 +1943,7 @@ local Settings = Window:Tab({Title = "Settings", Icon = "settings"}) do
     Settings:Toggle({
         Title = "Streamer Mode",
         Desc = "",
-        Value = _G.StreamerMode,
+        Value = Globals.StreamerMode,
         Callback = function(v)
             set_setting("StreamerMode", v)
             update_privacy_state()
@@ -1950,7 +1952,7 @@ local Settings = Window:Tab({Title = "Settings", Icon = "settings"}) do
 
     Settings:Section({Title = "Tags"})
     local tagOptions = collectTagOptions()
-    local tagValue = _G.tagName or "None"
+    local tagValue = Globals.tagName or "None"
     if not table.find(tagOptions, tagValue) then
         tagValue = "None"
     end
@@ -1980,7 +1982,7 @@ local Settings = Window:Tab({Title = "Settings", Icon = "settings"}) do
     Settings:Toggle({
         Title = "Send Webhook",
         Desc = "",
-        Value = _G.SendWebhook,
+        Value = Globals.SendWebhook,
         Callback = function(v)
             set_setting("SendWebhook", v)
         end
@@ -1989,13 +1991,13 @@ local Settings = Window:Tab({Title = "Settings", Icon = "settings"}) do
     Settings:Button({
         Title = "Test Webhook",
         Callback = function()
-            if not _G.WebhookURL or _G.WebhookURL == "" then
+            if not Globals.WebhookURL or Globals.WebhookURL == "" then
                 return Window:Notify({Title = "Error", Desc = "Webhook URL is empty!", Time = 3, Type = "error"})
             end
 
             local success, response = pcall(function()
                 return send_request({
-                    Url = _G.WebhookURL,
+                    Url = Globals.WebhookURL,
                     Method = "POST",
                     Headers = { ["Content-Type"] = "application/json" },
                     Body = game:GetService("HttpService"):JSONEncode({["content"] = "Webhook Test"})
@@ -2024,7 +2026,7 @@ local Settings = Window:Tab({Title = "Settings", Icon = "settings"}) do
         Title = "Webhook URL:",
         Desc = "",
         Placeholder = "https://discord.com/api/webhooks/...",
-        Value = _G.WebhookURL,
+        Value = Globals.WebhookURL,
         ClearTextOnFocus = true,
         Callback = function(value)
             if value ~= "" and value:find("https://discord.com/api/webhooks/") then
@@ -2261,9 +2263,9 @@ local function handle_post_match()
     until ui_root
 
     if not ui_root then return rejoin_match() end
-    if not _G.AutoRejoin then return end
+    if not Globals.AutoRejoin then return end
 
-    if not _G.SendWebhook then
+    if not Globals.SendWebhook then
         rejoin_match()
         return
     end
@@ -2323,7 +2325,7 @@ local function handle_post_match()
 
     pcall(function()
         send_request({
-            Url = _G.WebhookURL,
+            Url = Globals.WebhookURL,
             Method = "POST",
             Headers = { ["Content-Type"] = "application/json" },
             Body = game:GetService("HttpService"):JSONEncode(post_data)
@@ -2837,7 +2839,7 @@ function TDS:GameInfo(name, list)
     local vote_gui = player_gui:WaitForChild("ReactGameIntermission", 30)
     if not (vote_gui and vote_gui.Enabled and vote_gui:WaitForChild("Frame", 5)) then return end
 
-    local modifiers = (list and #list > 0) and list or _G.Modifiers
+    local modifiers = (list and #list > 0) and list or Globals.Modifiers
     
     cast_modifier_vote(modifiers)
 
@@ -3054,11 +3056,11 @@ local function get_root()
 end
 
 local function start_auto_pickups()
-    if auto_pickups_running or not _G.AutoPickups then return end
+    if auto_pickups_running or not Globals.AutoPickups then return end
     auto_pickups_running = true
 
     task.spawn(function()
-        while _G.AutoPickups do
+        while Globals.AutoPickups do
             local folder = workspace:FindFirstChild("Pickups")
             local hrp = get_root()
 
@@ -3073,7 +3075,7 @@ local function start_auto_pickups()
                         humanoid:MoveTo(pos)
                         local start_t = os.clock()
                         while os.clock() - start_t < 2 do
-                            if not _G.AutoPickups then
+                            if not Globals.AutoPickups then
                                 return false
                             end
                             if (hrp.Position - pos).Magnitude < 4 then
@@ -3100,14 +3102,14 @@ local function start_auto_pickups()
                             if blocked_conn then
                                 blocked_conn:Disconnect()
                             end
-                            if _G.AutoPickups then
+                            if Globals.AutoPickups then
                                 task.spawn(function()
                                     move_to_pos(target_pos)
                                 end)
                             end
                         end)
                         for _, wp in ipairs(waypoints) do
-                            if not _G.AutoPickups then
+                            if not Globals.AutoPickups then
                                 if blocked_conn then
                                     blocked_conn:Disconnect()
                                 end
@@ -3132,11 +3134,11 @@ local function start_auto_pickups()
                 end
 
                 for _, item in ipairs(folder:GetChildren()) do
-                    if not _G.AutoPickups then break end
+                    if not Globals.AutoPickups then break end
 
                     if item:IsA("MeshPart") and (item.Name == "SnowCharm" or item.Name == "Lorebook") then
                         if not is_void_charm(item) then
-                            if _G.PickupMethod == "Instant" then
+                            if Globals.PickupMethod == "Instant" then
                                 hrp.CFrame = item.CFrame * CFrame.new(0, 3, 0)
                                 task.wait(0.2)
                                 task.wait(0.3)
@@ -3159,11 +3161,11 @@ local function start_auto_pickups()
 end
 
 local function start_auto_skip()
-    if auto_skip_running or not _G.AutoSkip then return end
+    if auto_skip_running or not Globals.AutoSkip then return end
     auto_skip_running = true
 
     task.spawn(function()
-        while _G.AutoSkip do
+        while Globals.AutoSkip do
             local skip_visible =
                 player_gui:FindFirstChild("ReactOverridesVote")
                 and player_gui.ReactOverridesVote:FindFirstChild("Frame")
@@ -3182,7 +3184,7 @@ local function start_auto_skip()
 end
 
 local function start_claim_rewards()
-    if auto_claim_rewards or not _G.ClaimRewards or game_state ~= "LOBBY" then 
+    if auto_claim_rewards or not Globals.ClaimRewards or game_state ~= "LOBBY" then 
         return 
     end
     
@@ -3241,7 +3243,7 @@ local function start_anti_lag()
     settings.QualityLevel = Enum.QualityLevel.Level01
 
     task.spawn(function()
-        while _G.AntiLag do
+        while Globals.AntiLag do
             local towers_folder = workspace:FindFirstChild("Towers")
             local client_units = workspace:FindFirstChild("ClientUnits")
             local enemies = workspace:FindFirstChild("NPCs")
@@ -3274,13 +3276,13 @@ local function start_anti_lag()
 end
 
 local function start_auto_chain()
-    if auto_chain_running or not _G.AutoChain then return end
+    if auto_chain_running or not Globals.AutoChain then return end
     auto_chain_running = true
 
     task.spawn(function()
         local idx = 1
 
-        while _G.AutoChain do
+        while Globals.AutoChain do
             local commander = {}
             local towers_folder = workspace:FindFirstChild("Towers")
 
@@ -3302,7 +3304,7 @@ local function start_auto_chain()
                 local replicator = current_commander:FindFirstChild("TowerReplicator")
                 local upgrade_level = replicator and replicator:GetAttribute("Upgrade") or 0
 
-                if upgrade_level >= 4 and _G.SupportCaravan then
+                if upgrade_level >= 4 and Globals.SupportCaravan then
                     remote_func:InvokeServer(
                         "Troops",
                         "Abilities",
@@ -3347,11 +3349,11 @@ local function start_auto_chain()
 end
 
 local function start_auto_dj_booth()
-    if auto_dj_running or not _G.AutoDJ then return end
+    if auto_dj_running or not Globals.AutoDJ then return end
     auto_dj_running = true
 
     task.spawn(function()
-        while _G.AutoDJ do
+        while Globals.AutoDJ do
             local towers_folder = workspace:FindFirstChild("Towers")
 
             if towers_folder then
@@ -3382,7 +3384,7 @@ local function start_auto_dj_booth()
 end
 
 local function start_auto_necro()
-    if auto_necro or not _G.AutoNecro then return end
+    if auto_necro or not Globals.AutoNecro then return end
     auto_necro_running = true
 
     local lastActivation = 0
@@ -3464,7 +3466,7 @@ local function start_auto_necro()
     task.spawn(function()
         local idx = 1
 
-        while _G.AutoNecro do
+        while Globals.AutoNecro do
             local towers_folder = workspace:FindFirstChild("Towers")
             local necromancer = getNecros(towers_folder)
             cleanAllGraves(necromancer)
@@ -3509,13 +3511,13 @@ local function start_auto_necro()
 end
 
 local function start_auto_mercenary()
-    if not _G.AutoMercenary and not _G.AutoMilitary then return end
+    if not Globals.AutoMercenary and not Globals.AutoMilitary then return end
         
     if auto_mercenary_base_running then return end
     auto_mercenary_base_running = true
 
     task.spawn(function()
-        while _G.AutoMercenary do
+        while Globals.AutoMercenary do
             local towers_folder = workspace:FindFirstChild("Towers")
 
             if towers_folder then
@@ -3535,14 +3537,14 @@ local function start_auto_mercenary()
                                 Data = {
                                     pathName = 1, 
                                     directionCFrame = CFrame.new(), 
-                                    dist = _G.MercenaryPath or 195
+                                    dist = Globals.MercenaryPath or 195
                                 } 
                             }
                         )
 
                         task.wait(0.5)
                         
-                        if not _G.AutoMercenary then break end
+                        if not Globals.AutoMercenary then break end
                     end
                 end
             end
@@ -3555,13 +3557,13 @@ local function start_auto_mercenary()
 end
 
 local function start_auto_military()
-    if not _G.AutoMilitary then return end
+    if not Globals.AutoMilitary then return end
         
     if auto_military_base_running then return end
     auto_military_base_running = true
 
     task.spawn(function()
-        while _G.AutoMilitary do
+        while Globals.AutoMilitary do
             local towers_folder = workspace:FindFirstChild("Towers")
             if towers_folder then
                 for _, towers in ipairs(towers_folder:GetDescendants()) do
@@ -3580,14 +3582,14 @@ local function start_auto_military()
                                 Data = {
                                     pathName = 1, 
                                     pointToEnd = CFrame.new(), 
-                                    dist = _G.MilitaryPath or 195
+                                    dist = Globals.MilitaryPath or 195
                                 } 
                             }
                         )
 
                         task.wait(0.5)
                         
-                        if not _G.AutoMilitary then break end
+                        if not Globals.AutoMilitary then break end
                     end
                 end
             end
@@ -3600,7 +3602,7 @@ local function start_auto_military()
 end
 
 local function start_sell_farm()
-    if sell_farms_running or not _G.SellFarms then return end
+    if sell_farms_running or not Globals.SellFarms then return end
     sell_farms_running = true
 
     if game_state ~= "GAME" then 
@@ -3608,9 +3610,9 @@ local function start_sell_farm()
     end
 
     task.spawn(function()
-        while _G.SellFarms do
+        while Globals.SellFarms do
             local current_wave = get_current_wave()
-            if _G.SellFarmsWave and current_wave < _G.SellFarmsWave then
+            if Globals.SellFarmsWave and current_wave < Globals.SellFarmsWave then
                 task.wait(1)
                 continue
             end
@@ -3640,43 +3642,43 @@ end
 
 task.spawn(function()
     while true do
-        if _G.AutoPickups and not auto_pickups_running then
+        if Globals.AutoPickups and not auto_pickups_running then
             start_auto_pickups()
         end
         
-        if _G.AutoSkip and not auto_skip_running then
+        if Globals.AutoSkip and not auto_skip_running then
             start_auto_skip()
         end
 
-        if _G.AutoChain and not auto_chain_running then
+        if Globals.AutoChain and not auto_chain_running then
             start_auto_chain()
         end
 
-        if _G.AutoDJ and not auto_dj_running then
+        if Globals.AutoDJ and not auto_dj_running then
             start_auto_dj_booth()
         end
 
-        if _G.AutoNecro and not auto_necro_running then
+        if Globals.AutoNecro and not auto_necro_running then
             start_auto_necro()
         end
 
-        if _G.AutoMercenary and not auto_mercenary_base_running then
+        if Globals.AutoMercenary and not auto_mercenary_base_running then
             start_auto_mercenary()
         end
 
-        if _G.AutoMilitary and not auto_military_base_running then
+        if Globals.AutoMilitary and not auto_military_base_running then
             start_auto_military()
         end
 
-        if _G.SellFarms and not sell_farms_running then
+        if Globals.SellFarms and not sell_farms_running then
             start_sell_farm()
         end
         
-        if _G.AntiLag and not anti_lag_running then
+        if Globals.AntiLag and not anti_lag_running then
             start_anti_lag()
         end
 
-        if _G.AutoRejoin and not back_to_lobby_running then
+        if Globals.AutoRejoin and not back_to_lobby_running then
             start_back_to_lobby()
         end
         
@@ -3684,7 +3686,7 @@ task.spawn(function()
     end
 end)
 
-if _G.ClaimRewards and not auto_claim_rewards then
+if Globals.ClaimRewards and not auto_claim_rewards then
     start_claim_rewards()
 end
 

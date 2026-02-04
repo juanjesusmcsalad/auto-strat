@@ -40,14 +40,14 @@ To run this automatically, place your script in your executor's **`autoexec`** f
 
 ```lua
 -- [[ CONFIGURATION ]]
-_G.AutoStrat     = true
-_G.AutoSkip      = true
-_G.AutoPickups = true
-_G.AntiLag = true
+getgenv().AutoStrat     = true
+getgenv().AutoSkip      = true
+getgenv().AutoPickups = true
+getgenv().AntiLag = true
 
 -- [[ WEBHOOK SETTINGS ]]
-_G.SendWebhook   = false -- Set to true to enable notifications
-_G.Webhook       = "YOUR-WEBHOOK-URL-HERE" 
+getgenv().SendWebhook   = false -- Set to true to enable notifications
+getgenv().Webhook       = "YOUR-WEBHOOK-URL-HERE" 
 
 -- [[ INITIALIZE LIBRARY ]]
 local TDS = loadstring(game:HttpGet("https://raw.githubusercontent.com/DuxiiT/tds-autostrat/refs/heads/main/main.lua"))()
@@ -68,7 +68,7 @@ local TDS = loadstring(game:HttpGet("https://raw.githubusercontent.com/DuxiiT/td
 ```
 
 > [!IMPORTANT]
-> Ensure `_G.SendWebhook` is set to `true` if you provide a URL; otherwise, the script may error out during initialization.
+> Ensure `getgenv().SendWebhook` is set to `true` if you provide a URL; otherwise, the script may error out during initialization.
 
 ---
 

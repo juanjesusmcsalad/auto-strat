@@ -73,14 +73,14 @@ Usage: TDS:Ability(index, "AbilityName", dataTable, loop)
     }
 
 --------------------------------------------------------------------------------
-[ GLOBAL CONFIGURATION (_G) ]
+[ GLOBAL CONFIGURATION (getgenv) ]
 --------------------------------------------------------------------------------
-_G.AutoStrat     = true  -- Enables the 24/7 infinite loop
-_G.AutoSkip      = true  -- Automatically votes to skip waves
-_G.AutoPickups = true  -- Automatically collects event snowballs
-_G.Webhook       = ""    -- Your Discord Webhook URL
-_G.SendWebhook   = true  -- Toggles match result logging
-_G.AntiLag     = true     -- Stops you from lagging too hard
+getgenv().AutoStrat     = true  -- Enables the 24/7 infinite loop
+getgenv().AutoSkip      = true  -- Automatically votes to skip waves
+getgenv().AutoPickups = true  -- Automatically collects event snowballs
+getgenv().Webhook       = ""    -- Your Discord Webhook URL
+getgenv().SendWebhook   = true  -- Toggles match result logging
+getgenv().AntiLag     = true     -- Stops you from lagging too hard
 
 --------------------------------------------------------------------------------
 [ ADVANCED: INFINITE LOOP (Autoexec) ]
