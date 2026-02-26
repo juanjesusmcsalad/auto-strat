@@ -3388,132 +3388,80 @@ local function StartAutoDjBooth()
     end)
 end
 
-local function StartAutoNecro()
-    if AutoNecro or not Globals.AutoNecro then return end
-    AutoNecroRunning = true
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-    local lastActivation = 0
-    local ownerId = game.Players.LocalPlayer.UserId
-
-    local function getNecros(towersFolder)
-        local list = {}
-        if not towersFolder then
-            return list
-        end
-        for _, rep in ipairs(towersFolder:GetDescendants()) do
-            if rep:IsA("Folder") and rep.Name == "TowerReplicator"
-            and rep:GetAttribute("Name") == "Necromancer"
-            and rep:GetAttribute("OwnerId") == ownerId then
-                list[#list + 1] = rep.Parent
-            end
-        end
-        return list
-    end
-
-    local function pickMaxGraves(rep, graveStore, up)
-        local maxGraves = rep and rep:GetAttribute("Max_Graves")
-        if graveStore then
-            local gMax = graveStore:GetAttribute("Max_Graves")
-            if type(gMax) == "number" and gMax > 0 then
-                maxGraves = gMax
-            end
-        end
-        if not maxGraves or maxGraves < 2 then
-            if up >= 4 then
-                maxGraves = 9
-            elseif up >= 2 then
-                maxGraves = 6
-            else
-                maxGraves = 3
-            end
-        end
-        return maxGraves
-    end
-
-    local function countGraves(graveStore)
-        if not graveStore then
-            return 0
-        end
-        local cnt = 0
-        for k, v in pairs(graveStore:GetAttributes()) do
-            if type(k) == "string" and #k > 20 then
-                local isDestroy = false
-                if type(v) == "table" then
-                    for _, elem in pairs(v) do
-                        if tostring(elem) == "Destroy" then
-                            isDestroy = true
-                            break
-                        end
-                    end
-                elseif tostring(v):find("Destroy") then
-                    isDestroy = true
-                end
-                if isDestroy then
-                    graveStore:SetAttribute(k, nil)
-                else
-                    cnt += 1
-                end
-            end
-        end
-        return cnt
-    end
-
-    local function cleanAllGraves(list)
-        for _, necro in ipairs(list) do
-            local rep = necro and necro:FindFirstChild("TowerReplicator")
-            local store = rep and rep:FindFirstChild("GraveStone")
-            if store then
-                countGraves(store)
-            end
-        end
-    end
-
-    task.spawn(function()
-        local idx = 1
-
-        while Globals.AutoNecro do
-            local TowersFolder = workspace:FindFirstChild("Towers")
-            local necromancer = getNecros(TowersFolder)
-            cleanAllGraves(necromancer)
-            
-            if #necromancer >= 1 then
-                if idx > #necromancer then idx = 1 end
-                local CurrentNecromancer = necromancer[idx]
-                local replicator = CurrentNecromancer:FindFirstChild("TowerReplicator")
-
-                local up = replicator and (replicator:GetAttribute("Upgrade") or 0) or 0
-                local graveStore = replicator and replicator:FindFirstChild("GraveStone")
-                local maxGraves = pickMaxGraves(replicator, graveStore, up)
-                local graveCount = countGraves(graveStore)
-                local debounce = (replicator and replicator:GetAttribute("AbilityDebounce")) or 5
-                local now = os.clock()
-
-                if maxGraves and graveCount >= maxGraves and (now - lastActivation >= debounce) then
-                    local response = RemoteFunc:InvokeServer(
-                        "Troops",
-                        "Abilities",
-                        "Activate",
-                        { Troop = CurrentNecromancer, Name = "Raise The Dead", Data = {} }
-                    )
-                    
-                    if response then 
-                        lastActivation = now
-                        idx += 1
-                        task.wait(1)
-                    else
-                        task.wait(0.5)
-                    end
-                else
-                    task.wait(0.1)
-                end
-            else
-                task.wait(1)
-            end
-        end
-
-        AutoNecroRunning = false
-    end)
+while not Players.LocalPlayer do
+    task.wait()
 end
+
+local LocalPlayer = Players.LocalPlayer
+local RemoteFunction = ReplicatedStorage:WaitForChild("RemoteFunction")
+
+task.spawn(function()
+    local lastActivation = 0
+    local towerIndex = 1
+
+    while task.wait(1) do
+        local towers = {}
+        local towersFolder = workspace:FindFirstChild("Towers")
+
+        if towersFolder then
+            for _, tower in ipairs(towersFolder:GetChildren()) do
+                local replicator = tower:FindFirstChild("TowerReplicator")
+                if replicator and replicator:GetAttribute("Name") == "Necromancer" and replicator:GetAttribute("OwnerId") == LocalPlayer.UserId then
+                    table.insert(towers, tower)
+                end
+            end
+        end
+
+        if #towers > 0 then
+            if towerIndex > #towers then
+                towerIndex = 1
+            end
+
+            local currentTower = towers[towerIndex]
+            local replicator = currentTower.TowerReplicator
+            local upgradeLevel = replicator:GetAttribute("Upgrade") or 0
+            
+            local maxUnits = 3
+            if upgradeLevel >= 4 then
+                maxUnits = 9
+            elseif upgradeLevel >= 2 then
+                maxUnits = 6
+            end
+
+            local summonCount = 0
+            local graveStone = replicator:FindFirstChild("GraveStone")
+
+            if graveStone then
+                for key, value in pairs(graveStone:GetAttributes()) do
+                    if #key > 20 and not tostring(value):find("Destroy") then
+                        summonCount += 1
+                    end
+                end
+            end
+
+            local debounce = replicator:GetAttribute("AbilityDebounce") or 5
+            local currentTime = os.clock()
+
+            if summonCount >= maxUnits and (currentTime - lastActivation >= debounce + 0.2) then
+                local success = RemoteFunction:InvokeServer("Troops", "Abilities", "Activate", {
+                    Troop = currentTower,
+                    Name = "Raise The Dead",
+                    Data = {}
+                })
+
+                if success then
+                    lastActivation = currentTime
+                    towerIndex += 1
+                end
+            else
+                towerIndex = (towerIndex % #towers) + 1
+            end
+        end
+    end
+end) -- credits to antireal (1129894088418787338) <3
 
 local function StartAutoMercenary()
     if not Globals.AutoMercenary and not Globals.AutoMilitary then return end
