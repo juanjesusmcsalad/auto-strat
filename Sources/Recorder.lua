@@ -18,13 +18,23 @@ return function(ctx)
 
     local spawned_towers = {}
     local tower_count = 0
+    local last_wave = 0
     local Recorder
     local has_hook = type(hookmetamethod) == "function"
+    
+    local function get_wave_prefix()
+        local success, current_wave = pcall(function() return replicated_storage.StateReplicators.GameStateReplicator:GetAttribute("Wave") end)
+        if success and current_wave > last_wave then
+            last_wave = current_wave
+            return "\n-- [ Wave " .. current_wave .. " ] --\n"
+        end
+        return ""
+    end
 
     local function record_action(command_str)
         if not Globals.record_strat then return end
         if appendfile then
-            appendfile("Strat.txt", command_str .. "\n")
+            appendfile("Strat.txt", get_wave_prefix() .. command_str .. "\n")
         end
     end
 
@@ -92,6 +102,11 @@ return function(ctx)
         return tostring(n)
     end
 
+    local function round(n) 
+        if type(n) ~= "number" then return n end
+        return math.round(n * 1000) / 1000 
+    end
+
     local serialize_value
     local serialize_value_raw
     local serialize_table
@@ -136,15 +151,15 @@ return function(ctx)
         elseif t == "Vector3" then
             return string.format(
                 "Vector3.new(%s, %s, %s)",
-                num_to_str(v.X),
-                num_to_str(v.Y),
-                num_to_str(v.Z)
+                num_to_str(round(v.X)),
+                num_to_str(round(v.Y)),
+                num_to_str(round(v.Z))
             )
         elseif t == "CFrame" then
             local comps = {v:GetComponents()}
             local parts = {}
             for i = 1, #comps do
-                parts[i] = num_to_str(comps[i])
+                parts[i] = num_to_str(round(comps[i]))
             end
             return "CFrame.new(" .. table.concat(parts, ", ") .. ")"
         elseif t == "Instance" then
@@ -176,15 +191,15 @@ return function(ctx)
         elseif t == "Vector3" then
             return string.format(
                 "Vector3.new(%s, %s, %s)",
-                num_to_str(v.X),
-                num_to_str(v.Y),
-                num_to_str(v.Z)
+                num_to_str(round(v.X)),
+                num_to_str(round(v.Y)),
+                num_to_str(round(v.Z))
             )
         elseif t == "CFrame" then
             local comps = {v:GetComponents()}
             local parts = {}
             for i = 1, #comps do
-                parts[i] = num_to_str(comps[i])
+                parts[i] = num_to_str(round(comps[i]))
             end
             return "CFrame.new(" .. table.concat(parts, ", ") .. ")"
         elseif t == "Instance" then
@@ -416,7 +431,7 @@ return function(ctx)
         record_line(cmd, "Unequipped: " .. tower_name)
     end
 
-    local function handle_namecall(remote, method, args)
+    local function handle_namecall(remote, method, args, results)
         if not Globals.record_strat then
             return
         end
@@ -431,9 +446,20 @@ return function(ctx)
         local a2 = args[2]
         local a3 = args[3]
         local a4 = args[4]
-		local a5 = args[5]
+        local a5 = args[5]
 
         if a1 == "Troops" and a2 == "Abilities" and a3 == "Activate" then
+            if type(a4) == "table" and type(a4.Name) == "string" then
+                local abilityName = a4.Name
+                if abilityName == "Call Of Arms" or abilityName == "Support Caravan" or abilityName == "Drop The Beat" or abilityName == "Raise The Dead" then
+                    return
+                end
+            end
+            
+            if not results or results[1] ~= true then
+                return
+            end
+            
             if type(a4) == "table" then
                 local idx = resolve_tower_index(a4.Troop)
                 local name = a4.Name
@@ -490,7 +516,7 @@ return function(ctx)
             end
         end
 
-		if a1 == "Troops" and a2 == "TowerServerEvent" and a3 == "ToggleSelectedTower" then
+        if a1 == "Troops" and a2 == "TowerServerEvent" and a3 == "ToggleSelectedTower" then
             local idx = resolve_tower_index(a4)
             local target_idx = resolve_tower_index(a5)
             if idx and target_idx then
@@ -502,7 +528,13 @@ return function(ctx)
         end
 
         if a1 == "Voting" and a2 == "Skip" then
-            record_line("TDS:VoteSkip()", "Voted to skip wave")
+            local current_wave = 0
+            current_wave = replicated_storage.StateReplicators.GameStateReplicator:GetAttribute("Wave") or 0
+            if current_wave == 0 then
+                record_line("TDS:Ready()", "Readied up for the match")
+            else
+                record_line("TDS:VoteSkip()", "Voted to skip wave")
+            end
             handled = true
             return
         end
@@ -619,8 +651,8 @@ return function(ctx)
         })
 
         if has_hook then
-            Globals.__tds_recorder_handler = function(remote, method, args)
-                handle_namecall(remote, method, args)
+            Globals.__tds_recorder_handler = function(remote, method, args, results)
+                handle_namecall(remote, method, args, results)
             end
 
             if not Globals.__tds_recorder_hooked then
@@ -633,9 +665,9 @@ return function(ctx)
                     local handler = Globals.__tds_recorder_handler
                     if handler and method then
                         task.spawn(function()
-							local set_id = setthreadidentity or setidentity or setthreadcontext
-							if set_id then set_id(7) end
-                            pcall(handler, self, method, args)
+                            local set_id = setthreadidentity or setidentity or setthreadcontext
+                            if set_id then set_id(7) end
+                            pcall(handler, self, method, args, results)
                         end)
                     end
                     return table.unpack(results, 1, results.n)
@@ -652,14 +684,14 @@ return function(ctx)
 
                 local current_mode = "Unknown"
                 local current_map = "Unknown"
-                local is_special = false
+                local skip_game_info = false
                 
                 local state_folder = replicated_storage:FindFirstChild("State")
                 if state_folder then
                     current_mode = state_folder.Difficulty.Value
                     current_map = state_folder.Map.Value
-                    if state_folder:FindFirstChild("Mode") and state_folder.Mode.Value == "Special" then
-                        is_special = true
+                    if current_mode == "Trial" or (state_folder:FindFirstChild("Mode") and state_folder.Mode.Value == "Special") then
+                        skip_game_info = true
                     end
                 end
 
@@ -715,6 +747,7 @@ return function(ctx)
                 Recorder:Log(tower3 .. ", " .. tower4 .. ", " .. tower5)
 
                 sync_existing_towers()
+                last_wave = 0
                 Globals.record_strat = true
                 if has_hook then
                     Recorder:Log("Extended recording enabled")
@@ -722,9 +755,9 @@ return function(ctx)
                     Recorder:Log("Limited recording (place/upgrade/sell)")
                 end
 
-                if writefile then 
+                if writefile then
                     local game_info_str = ""
-                    if not is_special then
+                    if not skip_game_info then
                         game_info_str = string.format('\nTDS:GameInfo("%s", {%s})', current_map, current_modifiers)
                     end
                     local config_header = string.format([[
@@ -775,6 +808,8 @@ TDS:Mode("%s")%s
                 local owner_id = replicator:GetAttribute("OwnerId")
                 if owner_id and owner_id ~= local_player.UserId then return end
 
+                if replicator:GetAttribute("Hologram") == true then return end
+
                 tower_count = tower_count + 1
                 local my_index = tower_count
                 spawned_towers[tower] = my_index
@@ -789,8 +824,15 @@ TDS:Mode("%s")%s
                     local p = tower:GetPivot().Position
                     pos_x, pos_y, pos_z = p.X, p.Y, p.Z
                 end
+
+                pos_x, pos_y, pos_z = round(pos_x), round(pos_y), round(pos_z)
                 
-                local command = 'TDS:Place("' .. tower_name .. '", ' .. tostring(pos_x) .. ', ' .. tostring(pos_y) .. ', ' .. tostring(pos_z) .. ')'
+                local command
+                if Globals.StackEnabled then
+                    command = 'TDS:Place("' .. tower_name .. '", ' .. tostring(pos_x) .. ', ' .. tostring(pos_y) .. ', ' .. tostring(pos_z) .. ', true)'
+                else
+                    command = 'TDS:Place("' .. tower_name .. '", ' .. tostring(pos_x) .. ', ' .. tostring(pos_y) .. ', ' .. tostring(pos_z) .. ')'
+                end
                 record_action(command)
                 Recorder:Log("Placed " .. tower_name .. " (Index: " .. my_index .. ")")
 

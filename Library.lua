@@ -107,6 +107,8 @@ local TimeScaleNoTicketsWarned = false
 local AutoMercenaryBaseRunning = false
 local AutoMilitaryBaseRunning = false
 local SellFarmsRunning = false
+local AutoGatlingRunning = false
+local GatlingExecuted = false
 
 local MaxPathDistance = 300 -- default
 local MilMarker = nil
@@ -130,6 +132,7 @@ local DefaultSettings = {
     MercenaryPath = false,
     AutoSkip = false,
     AutoChain = false,
+    AutoGatling = false,
     SupportCaravan = false,
     AutoDJ = false,
     AutoNecro = false,
@@ -862,6 +865,24 @@ local function UpdatePathVisuals()
     end
 end
 
+local function MissionsUIFix()
+    task.spawn(function()
+        while task.wait(1) do
+            pcall(function()
+                local MissionsScrollingFrame = game:GetService("Players").LocalPlayer.PlayerGui.ReactLobbyQuests.quests.missions.scrollingFrame
+                local MissionsListLayout = MissionsScrollingFrame.listLayout
+                local MissionFrame = MissionsScrollingFrame["1"]
+                if MissionFrame.AbsoluteSize.Y > 0 then
+                    local UIScaleRatio = MissionFrame.AbsoluteSize.Y / MissionFrame.Size.Y.Offset
+                    local CurrentCanvasSize = MissionsScrollingFrame.CanvasSize
+                    local CanvasHeight = (MissionsListLayout.AbsoluteContentSize.Y / UIScaleRatio) + 25
+                    MissionsScrollingFrame.CanvasSize = UDim2.new(CurrentCanvasSize.X.Scale, CurrentCanvasSize.X.Offset, CurrentCanvasSize.Y.Scale, CanvasHeight)
+                end
+            end)
+        end
+    end)
+end
+
 function TDS:Addons()
     local url = "https://api.jnkie.com/api/v1/luascripts/public/57fe397f76043ce06afad24f07528c9f93e97730930242f57134d0b60a2d250b/download"
 
@@ -950,6 +971,15 @@ local Autostrat = Window:Tab({Title = "Autostrat", Icon = "star"}) do
         Value = Globals.AutoSkip,
         Callback = function(v)
             SetSetting("AutoSkip", v)
+        end
+    })
+
+    Autostrat:Toggle({
+        Title = "Auto Gatling",
+        Desc = "Loads external Auto Gatling (credits to DeadSignalFound on GitHub)",
+        Value = Globals.AutoGatling,
+        Callback = function(v)
+            SetSetting("AutoGatling", v)
         end
     })
 
@@ -1155,6 +1185,7 @@ local Main = Window:Tab({Title = "Main", Icon = "stamp"}) do
         Value = false,
         Callback = function(v)
             StackEnabled = v
+            Globals.StackEnabled = v
 
             if StackEnabled then
                 Window:Notify({
@@ -2591,7 +2622,9 @@ local function UnlockSpeedTickets()
     end
 
     if LocalPlayer.TimescaleTickets.Value >= 1 then
-        if game.Players.LocalPlayer.PlayerGui.ReactUniversalHotbar.Frame.timescale.Lock.Visible then
+        local TimescaleButton = LocalPlayer.PlayerGui.ReactUniversalHotbar.Frame.timescale
+        local LockIcon = TimescaleButton:FindFirstChild("Lock")
+        if LockIcon and LockIcon.Visible then
             ReplicatedStorage.RemoteFunction:InvokeServer('TicketsManager', 'UnlockTimeScale')
             Logger:Log("Unlocked timescale tickets")
         end
@@ -2817,6 +2850,38 @@ function TDS:Mode(difficulty)
         return false 
     end
 
+    if difficulty == "Trial" then
+        local Elevators = workspace:WaitForChild("Elevators")
+        local Network = ReplicatedStorage:WaitForChild("Network")
+        
+        if Elevators and Network then
+            local targetElevator = nil
+            
+            repeat
+                for _, v in pairs(Elevators:GetChildren()) do
+                    if v.Name:match("Trial") or v.Name:match("Event") then
+                        targetElevator = v
+                        break
+                    end
+                end
+                if not targetElevator then task.wait(0.5) end
+            until targetElevator
+
+            task.spawn(function()
+                local ElevatorsNet = Network:WaitForChild("Elevators")
+                local EnterRemote = ElevatorsNet:WaitForChild("RF:Enter")
+                local SetSizeRemote = ElevatorsNet:WaitForChild("RF:SetSize")
+                local SetReadyRemote = ElevatorsNet:WaitForChild("RF:SetReady")
+                
+                pcall(function() EnterRemote:InvokeServer(targetElevator) end)
+                pcall(function() SetSizeRemote:InvokeServer(1) end)
+                pcall(function() SetReadyRemote:InvokeServer(true) end)
+            end)
+            
+            return true
+        end
+    end
+
     local LobbyHud = PlayerGui:WaitForChild("ReactLobbyHud", 30)
     local frame = LobbyHud and LobbyHud:WaitForChild("Frame", 30)
     local MatchMaking = frame and frame:WaitForChild("matchmaking", 30)
@@ -3005,6 +3070,14 @@ function TDS:GetWave()
     return GetCurrentWave()
 end
 
+function TDS:WaitForWave(targetWave)
+    if GameState ~= "GAME" then return false end
+    while self:GetWave() < targetWave do
+        task.wait(0.5)
+    end
+    return true
+end
+
 function TDS:RestartGame()
     TriggerRestart()
 end
@@ -3014,7 +3087,7 @@ function TDS:Place(TName, px, py, pz, ...)
     local stack = false
 
     if args[#args] == "stack" or args[#args] == true then
-        py = py+20
+        py = py+25
     end
     if GameState ~= "GAME" then
         return false 
@@ -3187,6 +3260,30 @@ end
 local function GetRoot()
     local char = LocalPlayer.Character
     return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local function StartAutoGatling()
+    if AutoGatlingRunning or not Globals.AutoGatling then return end
+    AutoGatlingRunning = true
+    task.spawn(function()
+        while Globals.AutoGatling do
+            if GameState == "GAME" then
+                if not GatlingExecuted then
+                    GatlingExecuted = true 
+                    task.spawn(function()
+                        pcall(function()
+                            loadstring(game:HttpGet("https://raw.githubusercontent.com/DeadSignalFound/Library/refs/heads/main/AutoGatlin.lua"))()
+                        end)
+                    end)
+                    
+                end
+            else
+                GatlingExecuted = false 
+            end
+            task.wait(1)
+        end
+        AutoGatlingRunning = false
+    end)
 end
 
 local function StartAutoPickups()
@@ -3820,6 +3917,10 @@ task.spawn(function()
             StartBackToLobby()
         end
 
+        if Globals.AutoGatling and not AutoGatlingRunning then
+            StartAutoGatling()
+        end
+
         task.wait(1)
     end
 end)
@@ -3827,5 +3928,7 @@ end)
 if Globals.ClaimRewards and not AutoClaimRewards then
     StartClaimRewards()
 end
+
+MissionsUIFix()
 
 return TDS
