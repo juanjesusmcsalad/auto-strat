@@ -104,7 +104,7 @@ return function(ctx)
 
     local function round(n) 
         if type(n) ~= "number" then return n end
-        return math.round(n * 1000) / 1000 
+        return math.round(n * 1000000) / 1000000
     end
 
     local serialize_value
