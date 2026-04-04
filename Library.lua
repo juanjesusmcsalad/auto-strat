@@ -3306,7 +3306,7 @@ local function StartAutoPickups()
                 for _, item in ipairs(folder:GetChildren()) do
                     if not Globals.AutoPickups then break end
 
-                    if item:IsA("MeshPart") and (item.Name == "SnowCharm" or item.Name == "Lorebook") then
+                    if item:IsA("MeshPart") and (item.Name == "Bunz" or item.Name == "Lorebook") then
                         if not IsVoidCharm(item) then
                             if Globals.PickupMethod == "Instant" then
                                 hrp.CFrame = item.CFrame * CFrame.new(0, 3, 0)
