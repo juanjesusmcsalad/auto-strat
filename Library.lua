@@ -1779,7 +1779,7 @@ local Misc = Window:Tab({Title = "Misc", Icon = "box"}) do
 
     Misc:Toggle({
         Title = "Auto Collect Pickups",
-        Desc = "Collects Logbooks + Bunz",
+        Desc = "Collects Logbooks + Event currency",
         Value = Globals.AutoPickups,
         Callback = function(v)
             SetSetting("AutoPickups", v)
@@ -2222,6 +2222,12 @@ local function RejoinMatch()
                 elseif CurrentMode == "Badlands" then
                     payload = {
                         mode = "badlands",
+                        count = 1
+                    }
+                elseif CurrentMode == "Easy" or CurrentMode == "Hard" then
+                    payload = {
+                        difficulty = CurrentMode,
+                        mode = "ducky2025",
                         count = 1
                     }
                 else
@@ -2800,6 +2806,12 @@ function TDS:Mode(difficulty)
                         mode = mode,
                         count = 1
                     }
+                elseif difficulty == "Easy" or difficulty == "Hard" then
+                    payload = {
+                        difficulty = difficulty,
+                        mode = "ducky2025",
+                        count = 1
+                    }
                 else
                     payload = {
                         difficulty = difficulty,
@@ -3306,7 +3318,7 @@ local function StartAutoPickups()
                 for _, item in ipairs(folder:GetChildren()) do
                     if not Globals.AutoPickups then break end
 
-                    if item:IsA("MeshPart") and (item.Name == "Bunz" or item.Name == "Lorebook") then
+                    if item:IsA("MeshPart") and (item.Name == "Bunz" or item.Name == "Lorebook" or item.Name == "SnowCharm") then
                         if not IsVoidCharm(item) then
                             if Globals.PickupMethod == "Instant" then
                                 hrp.CFrame = item.CFrame * CFrame.new(0, 3, 0)
