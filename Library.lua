@@ -230,7 +230,9 @@ TDS = {
         ["Hardcore"] = "hardcore",
         ["PizzaParty"] = "halloween",
         ["Badlands"] = "badlands",
-        ["PollutedWasteland"] = "polluted"
+        ["PollutedWasteland"] = "polluted",
+        ["DuckyEasy"] = "ducky2025",
+        ["DuckyHard"] = "ducky2025"
     }
 }
 TDS["placed_towers"] = TDS.PlacedTowers
@@ -2203,6 +2205,7 @@ local function RejoinMatch()
         if CurrentMode then
             local ok, result = pcall(function()
                 local payload
+                local EventMode = StateFolder:FindFirstChild("Mode") and StateFolder.Mode.Value
 
                 if CurrentMode == "PizzaParty" then
                     payload = {
@@ -2224,7 +2227,7 @@ local function RejoinMatch()
                         mode = "badlands",
                         count = 1
                     }
-                elseif CurrentMode == "Easy" or CurrentMode == "Hard" then
+                elseif EventMode == "DuckEvent" then
                     payload = {
                         difficulty = CurrentMode,
                         mode = "ducky2025",
@@ -2806,12 +2809,9 @@ function TDS:Mode(difficulty)
                         mode = mode,
                         count = 1
                     }
-                elseif difficulty == "Easy" or difficulty == "Hard" then
-                    payload = {
-                        difficulty = difficulty,
-                        mode = "ducky2025",
-                        count = 1
-                    }
+                    if difficulty:match("Ducky") then
+                        payload.difficulty = difficulty:gsub("Ducky", "")
+                    end
                 else
                     payload = {
                         difficulty = difficulty,

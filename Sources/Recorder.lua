@@ -690,7 +690,15 @@ return function(ctx)
                 if state_folder then
                     current_mode = state_folder.Difficulty.Value
                     current_map = state_folder.Map.Value
-                    if current_mode == "Trial" or (state_folder:FindFirstChild("Mode") and state_folder.Mode.Value == "Special") then
+                    local mode_obj = state_folder:FindFirstChild("Mode")
+                    if mode_obj and mode_obj.Value == "DuckEvent" then
+                        if current_mode == "Easy" then
+                            current_mode = "DuckyEasy"
+                        elseif current_mode == "Hard" then
+                            current_mode = "DuckyHard"
+                        end
+                    end
+                    if current_mode == "Trial" or (mode_obj and (mode_obj.Value == "Special" or mode_obj.Value == "DuckEvent")) then
                         skip_game_info = true
                     end
                 end
