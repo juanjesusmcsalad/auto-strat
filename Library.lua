@@ -1,20 +1,53 @@
 local Globals = getgenv()
 
+local PlayersService = game:GetService("Players")
+local TeleportService = game:GetService("TeleportService")
+local LocalPlayer = PlayersService.LocalPlayer or PlayersService.PlayerAdded:Wait()
+
+local AntiStuck = nil
+
+local function StartAntiStuck()
+    local function StuckState()
+        local isLoading = LocalPlayer:GetAttribute("Loading") == true
+        local isTeleporting = LocalPlayer:GetAttribute("Teleporting") == true
+
+        if isLoading or isTeleporting then
+            if not AntiStuck then
+                AntiStuck = task.spawn(function()
+                    task.wait(60)
+                    pcall(function()
+                        TeleportService:Teleport(3260590327)
+                    end)
+                end)
+            end
+        else
+            if AntiStuck then
+                task.cancel(AntiStuck)
+                AntiStuck = nil
+            end
+        end
+    end
+
+    LocalPlayer:GetAttributeChangedSignal("Loading"):Connect(StuckState)
+    LocalPlayer:GetAttributeChangedSignal("Teleporting"):Connect(StuckState)
+
+    StuckState()
+end
+
+StartAntiStuck()
+
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 -- // services & main refs
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local RunService = game:GetService("RunService")
-local TeleportService = game:GetService("TeleportService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PathfindingService = game:GetService("PathfindingService")
 local HttpService = game:GetService("HttpService")
 local RemoteFunc = ReplicatedStorage:WaitForChild("RemoteFunction")
 local RemoteEvent = ReplicatedStorage:WaitForChild("RemoteEvent")
-local PlayersService = game:GetService("Players")
-local LocalPlayer = PlayersService.LocalPlayer or PlayersService.PlayerAdded:Wait()
 local mouse = LocalPlayer:GetMouse()
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local FileName = "ADS_Config.json"
