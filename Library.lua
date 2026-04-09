@@ -3243,10 +3243,9 @@ local function StartAutoGatling()
                     GatlingExecuted = true 
                     task.spawn(function()
                         pcall(function()
-                            loadstring(game:HttpGet("https://raw.githubusercontent.com/DeadSignalFound/Library/refs/heads/main/AutoGatlin.lua"))()
+                            loadstring(game:HttpGet("https://raw.githubusercontent.com/avtryxz/autogutlin/refs/heads/main/autogutlin.lua"))()
                         end)
                     end)
-                    
                 end
             else
                 GatlingExecuted = false 
