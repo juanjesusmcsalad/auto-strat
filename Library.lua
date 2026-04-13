@@ -2583,6 +2583,8 @@ local function HandlePostMatch()
     task.wait(1.5)
 
     RejoinMatch()
+
+    task.wait(9e9)
 end
 
 -- // voting & map selection
