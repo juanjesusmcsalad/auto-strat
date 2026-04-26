@@ -135,6 +135,8 @@ local SellFarmsRunning = false
 local AutoGatlingRunning = false
 local GatlingExecuted = false
 local AutoPremiumRunning = false
+local StackerErrorShown = false
+local PremiumLoaded = false
 
 local MaxPathDistance = 300 -- default
 local MilMarker = nil
@@ -908,8 +910,6 @@ local function MissionsUIFix()
         end
     end)
 end
-
-local PremiumLoaded = false
 
 function TDS:Addons()
     if GameState == "LOBBY" then 
@@ -3189,14 +3189,22 @@ function TDS:Place(TName, px, py, pz, ...)
     local args = {...}
 
     if args[#args] == "stack" or args[#args] == true then
-        Window:Notify({
-            Title = "ADS",
-            Desc = "You need to run TDS:Addons() first to use the stacker feature, running it for you!",
-            Time = 3,
-            Type = "error"
-        })
-        TDS:Addons()
-        return false
+        if not StackerErrorShown then
+            StackerErrorShown = true
+                Window:Notify({
+                    Title = "ADS",
+                    Desc = "You need to run TDS:Addons() first to use the stacker feature, running it for you!",
+                    Time = 3,
+                    Type = "error"
+                })
+            end
+
+            if not PremiumLoaded then
+                TDS:Addons()
+            end
+
+            return false
+        end
     end
 
     if GameState ~= "GAME" then
