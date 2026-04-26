@@ -3191,10 +3191,11 @@ function TDS:Place(TName, px, py, pz, ...)
     if args[#args] == "stack" or args[#args] == true then
         Window:Notify({
             Title = "ADS",
-            Desc = "You need to run TDS:Addons() first to use the stacker feature!",
+            Desc = "You need to run TDS:Addons() first to use the stacker feature, running it for you!",
             Time = 3,
             Type = "error"
         })
+        TDS:Addons()
         return false
     end
 
