@@ -966,6 +966,22 @@ end
 
 CurrentEquippedTowers = GetEquippedTowers()
 
+-- // private server code storage
+local PrivateServerCode = nil
+local function CapturePrivateServerCode()
+    local url = game:GetService("RunService"):IsStudio() and "" or (game.JobId or "")
+    
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local StateFolder = ReplicatedStorage:FindFirstChild("State")
+    
+    if StateFolder then
+        local codeAttr = StateFolder:GetAttribute("PrivateServerCode") or StateFolder:GetAttribute("LinkCode")
+        if codeAttr then
+            PrivateServerCode = tostring(codeAttr)
+        end
+    end
+end
+
 -- // ui
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/DuxiiT/auto-strat/refs/heads/main/Sources/UI.lua"))()
 
@@ -2405,6 +2421,11 @@ local function RejoinMatch()
                     }
                 end
 
+                -- Add private server code to payload if available
+                if PrivateServerCode then
+                    payload.linkCode = PrivateServerCode
+                end
+
                 return remote:InvokeServer("Multiplayer", "v2:start", payload)
             end)
 
@@ -2922,6 +2943,11 @@ end
 function TDS:Mode(difficulty, code)
     if GameState ~= "LOBBY" then 
         return false 
+    end
+
+    -- Store the private server code for future rejoins
+    if code ~= nil then
+        PrivateServerCode = tostring(code)
     end
 
     if code ~= nil and not MarketplaceService:UserOwnsGamePassAsync(LocalPlayer.UserId, 10518590) then
