@@ -2371,6 +2371,17 @@ end
 
 -- // rejoining
 local function RejoinMatch()
+    if PrivateServerCode then
+        local ok = pcall(function()
+            game:GetService("ExperienceService"):LaunchExperience({
+                placeId = game.PlaceId,
+                linkCode = PrivateServerCode
+            })
+        end)
+
+        return ok
+    end
+
     local remote = game:GetService("ReplicatedStorage"):WaitForChild("RemoteFunction")
     local success = false
     local res
